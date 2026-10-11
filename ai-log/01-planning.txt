@@ -1,0 +1,822 @@
+
+❯ /init
+
+  Listed 1 directory, ran 1 shell command (ctrl+o to expand)
+
+⏺ Write(CLAUDE.md)
+  ⎿  Wrote 18 lines to CLAUDE.md
+      1 # CLAUDE.md
+      3 This file provides guidance to Claude Code (claude.ai/code) when
+        working with code in this repository.
+      5 ## Current state
+      6
+        `main` with no commits, and two empty directories. There is no so
+        urce code, package manifest, framework, build tooling, or test se
+      8
+      9 Do not assume a stack (framework, package manager, styling, hosti
+        caffolding.
+     … +18 lines (ctrl+o to expand)
+
+⏺ I created CLAUDE.md, but it is deliberately minimal because the repository has
+  nothing to analyze yet.
+
+  The repo is a git repo on main with no commits and two empty folders, docs/
+  and ai-log/. There is no source code, package manifest, README, or
+  Cursor/Copilot rules, and no Codex or Gemini config to import.
+
+  Rather than invent commands or an architecture, the file records:
+
+  - Current state: an empty scaffold with no build, lint, or test commands.
+  - Stack: none chosen, so future sessions should ask before scaffolding one.
+  - Directories: the purpose of docs/ and ai-log/ is my guess from their names.
+    Correct this if you have a specific convention in mind, especially for
+    ai-log/.
+  - Upkeep: a reminder to fill in real commands and architecture once code
+    exists.
+
+  Once the stack is in place, re-run /init to replace this with a proper file.
+
+❯ Act as a senior product-minded software engineer and pragmatic technical
+  lead.
+
+  The task is to build a conversion-focused landing page for Czech retail
+  investors comparing US-listed ETFs. The site must be mobile-first,
+  use real sourced data, capture leads, measure the conversion funnel,
+  and be deployable to Vercel.
+
+  The landing page and ad copy must be in Czech.
+  Code, technical documentation, and AI collaboration notes may be in Czech
+
+  Language requirements:
+  - All user-facing website content and advertising copy must be in Czech.
+  - README.md must be written in Czech, including the project overview,
+    setup instructions, environment variables, architecture overview,
+    data sources, known limitations, and deployment instructions.
+  - Code, variable names, function names, types, and other identifiers
+    should be in English.
+  - Technical documentation other than README.md may be in English.
+  - AI collaboration logs must preserve the actual language of the
+    conversations. Do not translate or fabricate logs.
+
+  First, inspect the existing repository and its current tech stack.
+
+  Do not implement features, overwrite files, or install dependencies yet.
+
+  Return:
+  1. Current project structure and existing setup.
+  2. Recommended stack, preserving useful existing code.
+  3. Product scope and target audience.
+  4. Proposed architecture and minimal file structure.
+  5. Data model for ETFs, leads, and funnel events.
+  6. Risks, assumptions, and acceptance criteria.
+  7. A realistic implementation plan for the deadline.
+
+  Treat NYSE Arca as a distinct listing venue and verify each ETF's
+  listing venue from an issuer source. Do not invent financial data.
+
+  Keep the MVP small. Prioritize a genuinely working product over
+  unnecessary abstractions or extra features.
+
+⏺ Nothing has been implemented or installed; this is the plan only. Two things
+  need your input before I start: the deadline (none is stated), and the lead
+  offer in section 3.
+
+  1. Current state
+
+  The repo is empty: main with no commits, empty docs/ and ai-log/, plus the
+  CLAUDE.md I added earlier. There is no stack and no code to preserve.
+
+  2. Recommended stack
+
+  - Framework: Next.js (App Router) with TypeScript and Tailwind, statically
+    rendered, deployed on Vercel.
+  - ETF data: a typed, hand-curated file in the repo, with a source URL and
+    as-of date on every record. No live market API.
+  - Leads and funnel events: one Postgres database (Neon via the Vercel
+    Marketplace), written through a server action and one route handler,
+    validated with Zod.
+  - Analytics: first-party events in the same database, so the funnel is a
+    single SQL query. The session ID lives in memory only (no cookies or
+    storage), which avoids a consent banner.
+  - Tests: Vitest for data validation and lead-schema tests only.
+
+  3. Scope and audience
+
+  The audience is Czech retail investors who are starting out or investing
+  regularly, have heard of "S&P 500 ETF", and arrive on mobile from paid ads.
+
+  The MVP is one page: hero and CTA, a comparison of 6–8 ETFs (cards on mobile,
+  table on desktop), a short section on what to look at, the lead form, FAQ, and
+  sources and disclaimers. It also includes a privacy page and 3–5 Czech ad
+  copy variants in docs/.
+
+  Out of scope: accounts, a CMS, live prices, calculators, a blog, and A/B
+  testing infrastructure.
+
+  Open question: what does the lead get in return (PDF guide, email series,
+  consultation)? The offer drives the copy and the form.
+
+  4. Architecture
+
+  app/
+    layout.tsx  page.tsx  globals.css
+    ochrana-osobnich-udaju/page.tsx
+    api/events/route.ts
+    actions/submit-lead.ts
+  components/   Hero, EtfComparison, LeadForm, Faq, Sources
+  data/etfs.ts
+  lib/          db.ts, schema.ts, analytics.ts, types.ts
+  db/schema.sql
+  docs/         ad-copy.md, data-sources.md, funnel.md
+  ai-log/
+  README.md     (Czech)
+
+  5. Data model
+
+  type ListingVenue = "NYSE Arca" | "NYSE" | "Nasdaq" | "Cboe BZX"; // Arca is
+  never folded into NYSE
+
+  interface Etf {
+    ticker: string; name: string; issuer: string; isin?: string;
+    listingVenue: ListingVenue;
+    indexTracked: string;
+    expenseRatioPct: number;
+    inceptionDate: string;
+    distribution: "distributing" | "accumulating";
+    aumUsd?: number;
+    source: { url: string; retrievedAt: string; dataAsOf: string }; // issuer
+  page
+  }
+
+  interface Lead {
+    id: string; email: string; createdAt: string;
+    consentMarketing: boolean; consentTextVersion: string;
+    interestedTicker?: string;
+    utmSource?: string; utmMedium?: string; utmCampaign?: string; utmContent?:
+  string;
+    referrer?: string; sessionId: string;
+  }
+
+  interface FunnelEvent {
+    id: string; sessionId: string; createdAt: string;
+    name: "page_view" | "comparison_view" | "etf_expand" | "cta_click"
+        | "form_start" | "form_submit" | "lead_created" | "form_error";
+    props?: Record<string, string>; utmSource?: string; utmCampaign?: string;
+  }
+  Optional fields are omitted from the page when the issuer does not publish
+  them; they are never estimated.
+
+  6. Risks, assumptions, acceptance criteria
+
+  Risks
+  - PRIIPs/KID: most US-listed ETFs lack a KID document, so EU retail clients
+    usually cannot buy them through EU brokers. The page must say this honestly,
+    otherwise it will mislead visitors. This is the biggest product risk and
+    may shape the offer.
+  - Investment advice: copy must stay informational, with no recommendations,
+    plus a "not investment advice" notice and a past-performance warning.
+  - GDPR: the form needs an explicit unticked consent box, the controller's
+    identity, and a privacy page. I need the controller's legal name and
+    contact.
+  - Stale data: the as-of date is shown per ETF. I would exclude performance
+    figures from the MVP, because they go stale fastest.
+  - Spam: honeypot field plus a basic rate limit.
+
+  Assumptions
+  - The candidate set is large, liquid funds from Vanguard, iShares, SPDR,
+    Invesco and Schwab.
+  - I have web access to verify each fund's venue and figures on its issuer page
+    during the build. Any ETF I cannot verify gets dropped.
+  - A Vercel account and a database are available.
+
+  Acceptance criteria
+  - All UI text is Czech, and the page is usable at 360px width.
+  - Mobile Lighthouse scores are at least 90 for performance and accessibility.
+  - Every ETF figure links to an issuer source with a date, and the venue is
+    verified per fund.
+  - A submitted lead is persisted with its UTM parameters, and duplicates and
+    invalid input are handled.
+  - A documented SQL query returns the funnel from view to CTA to form start to
+    lead.
+  - The site deploys to Vercel from a clean clone following the Czech README.
+  - ai-log/ contains only real, untranslated exports. Session transcripts are
+    stored locally as JSONL and I can copy them in unedited.
+
+  7. Implementation plan (about 12–14 focused hours)
+
+  ┌──────┬───────────────────────────────────────────────────────────┬───────┐
+  │ Step │                           Work                            │ Hours │
+  ├──────┼───────────────────────────────────────────────────────────┼───────┤
+  │ 1    │ Scaffold, first Vercel deploy, database schema            │ 1.5   │
+  ├──────┼───────────────────────────────────────────────────────────┼───────┤
+  │ 2    │ ETF research and verification from issuer pages,          │ 2.5   │
+  │      │ data/etfs.ts, validation test                             │       │
+  ├──────┼───────────────────────────────────────────────────────────┼───────┤
+  │ 3    │ Page sections and Czech copy, mobile-first                │ 3.5   │
+  ├──────┼───────────────────────────────────────────────────────────┼───────┤
+  │ 4    │ Lead form, server action, consent, privacy page           │ 2     │
+  ├──────┼───────────────────────────────────────────────────────────┼───────┤
+  │ 5    │ Event tracking, UTM capture, funnel query                 │ 1.5   │
+  ├──────┼───────────────────────────────────────────────────────────┼───────┤
+  │ 6    │ Ad copy, Czech README, docs, AI logs                      │ 1.5   │
+  ├──────┼───────────────────────────────────────────────────────────┼───────┤
+  │ 7    │ QA on a real phone, Lighthouse, production deploy         │ 1     │
+  └──────┴───────────────────────────────────────────────────────────┴───────┘
+
+  If the deadline is tighter than two working days, I would cut in this order:
+  step 5 shrinks to four events, the ETF set drops to five, and the FAQ is
+  shortened.
+
+❯ Revise your previous plan to fully match the hiring assignment.
+
+  Keep the existing stack recommendation unless you identify a concrete
+  reason to change it. Keep the MVP focused and avoid unnecessary
+  abstractions.
+
+  Please address these points:
+
+  1. Lead magnet
+     Choose a clear offer for Czech retail investors. I suggest a Czech PDF
+     guide with an extended ETF comparison and a practical checklist.
+     After successful lead submission, provide immediate access to the guide.
+     Do not add an email delivery service unless necessary.
+  2. Interactive experience
+     Include a working ETF fee calculator or similarly useful interactive
+     comparison that helps the visitor understand the value before submitting
+     their contact details. Keep the calculations transparent and testable.
+  3. Advertising and landing page
+     Include exactly two Czech ad variants.
+     The first screen must match the promise in each ad.
+     Explain how the visitor moves from the ad to the comparison, then to the
+     lead form, and finally to the guide.
+  4. ETF data
+     Use real, verified data and issuer sources.
+     Keep NYSE and NYSE Arca distinct. Verify each fund's actual listing venue.
+     Keep the listing venue separate from fund domicile.
+     Record source URLs and relevant verification dates. Never invent data.
+     Explain relevant EU retail-investor access limitations accurately.
+  5. Conversion funnel
+     Define and implement the events needed to measure the complete funnel,
+     from page visit and interaction through form submission and successful
+     lead creation. Keep personal information out of analytics events.
+     Explain how the funnel will be queried and measured.
+  6. Privacy and validation
+     Include server-side validation, reliable database persistence, appropriate
+     privacy information, and a clear distinction between guide delivery and
+     optional marketing consent. Do not invent legal entity details.
+  7. Final plan
+     Update the scope, architecture, data model, risks, acceptance criteria,
+     and proposed file structure. Make sure every requirement above is covered.
+
+  Return the revised plan only
+
+⏺ Revised plan: Czech landing page for US-listed ETFs
+
+  1. Scope and audience
+
+  The audience is Czech retail investors arriving on mobile from paid ads, who
+  know "S&P 500 ETF" as a term but have not compared individual funds.
+
+  In scope
+  - One landing page with two entry variants, one per ad.
+  - A comparison of 6–8 verified ETFs.
+  - A fee calculator.
+  - A lead form, a thank-you page with the PDF guide, and a privacy page.
+  - First-party funnel tracking.
+  - A Czech README, technical docs and real AI logs.
+
+  Out of scope: accounts, a CMS, live prices, performance figures, email
+  sending, A/B infrastructure, a blog.
+
+  2. Stack
+
+  The stack is unchanged: Next.js App Router, TypeScript, Tailwind, Neon
+  Postgres, Zod and Vitest on Vercel. The one addition is @react-pdf/renderer,
+  so the guide is generated from the same data file as the page and the two
+  cannot drift apart.
+
+  3. Lead magnet
+
+  The offer is "Průvodce americkými ETF pro české investory", a PDF containing:
+  - the extended comparison, with more fields per fund than the page shows;
+  - an explanation of EU access limits;
+  - a practical checklist for choosing an ETF.
+
+  Delivery works without an email service:
+  - A successful submission creates the lead with a random guideToken and
+    redirects to /dekujeme?t=….
+  - The download route checks the token against the database and streams the
+    PDF.
+  - The PDF is not in public/, so it cannot be fetched without a lead.
+
+  4. Interactive fee calculator
+
+  - Inputs: initial deposit, monthly contribution, horizon in years, assumed
+    annual return, and one or two ETFs from the list.
+  - Outputs: final value per fund, the amount lost to fees, and the difference
+    between the two funds.
+  - Formula: shown on the page and implemented as one pure function in
+    lib/calculator.ts.
+    - i = (1 + r − TER)^(1/12) − 1
+    - FV = P(1+i)^n + C·((1+i)^n − 1)/i
+    - feeCost = FV(TER=0) − FV(TER)
+  - Labelling: the return is a user assumption, not a forecast. The page states
+    that the result ignores taxes, FX, broker fees and spreads.
+  - Tests: zero return, zero fee, a hand-computed reference value, and fee cost
+    rising with TER.
+
+  5. Ads and visitor journey
+
+  There are exactly two ad variants, and neither contains figures.
+
+  ┌──────────┬────────────────────────────────┬────────────────────────────┐
+  │          │        Ad A: comparison        │         Ad B: fees         │
+  ├──────────┼────────────────────────────────┼────────────────────────────┤
+  │ Headline │ Americká ETF v jedné tabulce   │ Kolik vás stojí poplatky   │
+  │          │                                │ ETF za 20 let?             │
+  ├──────────┼────────────────────────────────┼────────────────────────────┤
+  │          │ Porovnejte poplatky, burzu a   │ Zadejte vklad a horizont.  │
+  │ Text     │ dostupnost největších          │ Kalkulačka ukáže, kolik si │
+  │          │ amerických ETF. Česky a s      │  z výnosu vezme poplatek   │
+  │          │ odkazy na zdroje.              │ fondu.                     │
+  ├──────────┼────────────────────────────────┼────────────────────────────┤
+  │ CTA      │ Zobrazit srovnání              │ Spočítat poplatky          │
+  ├──────────┼────────────────────────────────┼────────────────────────────┤
+  │ Lands on │ /                              │ /poplatky                  │
+  ├──────────┼────────────────────────────────┼────────────────────────────┤
+  │ First    │ H1 about the comparison, table │ H1 about fee cost,         │
+  │ screen   │  directly below                │ calculator directly below  │
+  └──────────┴────────────────────────────────┴────────────────────────────┘
+
+  Both routes render the same page component with a variant prop that sets the
+  hero and the section order. The variant is recorded on every event, so the
+  funnel splits by ad.
+
+  The journey is:
+  1. The ad leads to the matching hero.
+  2. The visitor uses the comparison and the calculator, both ungated.
+  3. A CTA, "Získat průvodce zdarma", leads to the form: email plus an optional
+     consent box.
+  4. The thank-you page offers the guide download.
+
+  6. ETF data
+
+  - Curation: data/etfs.ts is filled by hand from issuer fund pages and
+    prospectuses only.
+  - Candidates: large funds from SPDR, iShares, Vanguard, Invesco and Schwab.
+    Any fund whose venue or fees I cannot confirm from the issuer is dropped.
+  - Venue and domicile: listingVenue and domicile are separate fields. NYSE and
+    NYSE Arca are separate enum values and are never merged.
+  - Provenance: every record carries source URLs, the retrieval date and the
+    data as-of date, all shown on the page.
+  - EU access: the page and guide explain that the PRIIPs Regulation requires a
+    key information document (KID) for EEA retail investors. Most US ETF issuers
+    do not publish one, so EU brokers generally do not let retail clients buy
+    these funds.
+  - UCITS alternatives: EU-domiciled UCITS funds tracking the same indices are
+    named as the usual alternative. Specific funds are listed only if verified
+    the same way.
+  - Tax: tax statements are included only when checked against a primary source,
+    otherwise omitted.
+
+  7. Funnel
+
+  ┌─────────────────┬────────────────────────────────────────┬────────┐
+  │      Event      │               Fired when               │  Side  │
+  ├─────────────────┼────────────────────────────────────────┼────────┤
+  │ page_view       │ Page loads                             │ Client │
+  ├─────────────────┼────────────────────────────────────────┼────────┤
+  │ comparison_view │ Table scrolls into view                │ Client │
+  ├─────────────────┼────────────────────────────────────────┼────────┤
+  │ calculator_used │ First input change                     │ Client │
+  ├─────────────────┼────────────────────────────────────────┼────────┤
+  │ cta_click       │ Any CTA, with placement                │ Client │
+  ├─────────────────┼────────────────────────────────────────┼────────┤
+  │ form_start      │ First focus in the form                │ Client │
+  ├─────────────────┼────────────────────────────────────────┼────────┤
+  │ form_submit     │ Submit pressed                         │ Client │
+  ├─────────────────┼────────────────────────────────────────┼────────┤
+  │ form_error      │ Validation fails, error code only      │ Client │
+  ├─────────────────┼────────────────────────────────────────┼────────┤
+  │ lead_created    │ Same DB transaction as the lead insert │ Server │
+  ├─────────────────┼────────────────────────────────────────┼────────┤
+  │ guide_download  │ Download clicked                       │ Client │
+  └─────────────────┴────────────────────────────────────────┴────────┘
+
+  - No personal data: events hold a random per-page-load session ID, the
+    variant, UTM values and whitelisted props. They never hold email, IP or user
+    agent.
+  - No join to leads: the leads table does not store the session ID, so events
+    cannot be joined to a person.
+  - Measurement: one SQL query in docs/funnel.md, run in the Neon console. It
+    counts distinct sessions per step, grouped by variant and campaign, and
+    gives step-to-step rates.
+  - Consent rate: taken from the leads table.
+  - Limitation: a reload counts as a new session.
+
+  8. Privacy and validation
+
+  - Validation: the server action validates with Zod, normalises the email, and
+    uses a honeypot plus a minimum fill time against spam.
+  - Persistence: the lead and lead_created are written in one transaction. On
+    failure the visitor sees an error and gets no guide access.
+  - Duplicates: a repeat email gets the same response and guide access, without
+    revealing that it exists.
+  - Two purposes: the email is required for guide access. Marketing is a
+    separate, unticked, optional checkbox, stored with a timestamp and the
+    consent text version.
+  - Controller details: the privacy page reads them from environment variables.
+    If they are missing it shows a visible "to be completed" notice, and the
+    README lists this as a launch blocker. Nothing is invented.
+
+  9. Data model
+
+  type ListingVenue = "NYSE" | "NYSE Arca" | "Nasdaq" | "Cboe BZX";
+  type Variant = "compare" | "fees";
+
+  interface Etf {
+    ticker: string; name: string; issuer: string;
+    listingVenue: ListingVenue;        // from issuer source
+    domicile: string;                  // separate from venue
+    indexTracked: string;
+    expenseRatioPct: number;
+    inceptionDate: string;
+    distributionPolicy: string;
+    hasPriipsKid: boolean | "unverified";
+    sources: { label: string; url: string; retrievedAt: string }[];
+    dataAsOf: string;
+  }
+
+  interface Lead {
+    id: string; email: string;         // unique
+    guideToken: string; createdAt: string;
+    marketingConsent: boolean; consentAt?: string; consentTextVersion: string;
+    variant: Variant;
+    utmSource?: string; utmMedium?: string; utmCampaign?: string; utmContent?:
+  string;
+  }
+
+  interface FunnelEvent {
+    id: string; sessionId: string; createdAt: string;
+    name: EventName; variant: Variant;
+    props?: Record<string, string>;    // whitelisted keys, no PII
+    utmSource?: string; utmMedium?: string; utmCampaign?: string; utmContent?:
+  string;
+  }
+
+  10. File structure
+
+  app/
+    layout.tsx  globals.css
+    page.tsx                      # variant "compare"
+    poplatky/page.tsx             # variant "fees"
+    dekujeme/page.tsx
+    ochrana-osobnich-udaju/page.tsx
+    actions/submit-lead.ts
+    api/events/route.ts
+    api/guide/route.ts
+  components/  LandingPage, Hero, EtfComparison, FeeCalculator, LeadForm,
+  EuAccessNote, Faq, Sources
+  data/etfs.ts
+  lib/  calculator.ts  schema.ts  db.ts  analytics.ts  types.ts
+  guide/  GuideDocument.tsx  build-guide.ts
+  db/schema.sql
+  tests/  calculator.test.ts  schema.test.ts  etfs.test.ts
+  docs/  ad-copy.md  data-sources.md  funnel.md
+  ai-log/
+  README.md
+
+  11. Risks and open decisions
+
+  - Product fit: the funds being compared are mostly not purchasable by the
+    audience. The page handles this by being openly educational and pointing to
+    UCITS alternatives, and the ads must not imply the funds can be bought.
+  - Leads without consent: these cannot be contacted. I propose deleting
+    non-consented emails after 30 days, but the controller must confirm the
+    retention period.
+  - Regulatory: copy stays informational, with a "not investment advice" notice.
+  - PDF fonts: Czech diacritics need an embedded font, and the generated file
+    must be included in the Vercel function bundle.
+  - Rate limiting: there is no real rate limiter without an extra service. The
+    honeypot and unique email constraint are the mitigation.
+  - Deadline: still unstated. If time is short, I would cut the second ETF
+    selector in the calculator, then the FAQ, then reduce the set to five funds.
+
+  12. Acceptance criteria
+
+  - All UI, ad and guide text is Czech, identifiers are English, and the README
+    is Czech.
+  - Each ad's promise is visible on the first screen of its route at 360px
+    width.
+  - Every ETF has an issuer-verified venue, a separate domicile, source URLs and
+    dates. The data test fails on any missing source.
+  - Calculator tests pass and the formula is visible on the page.
+  - A valid submission persists a lead and gives immediate guide access.
+  - Invalid input is rejected server-side, and the guide cannot be reached
+    without a token.
+  - Marketing consent is optional, unticked by default and stored with its
+    version.
+  - The events table contains no personal data, and the documented query returns
+    the full funnel per variant.
+  - The site deploys to Vercel from a clean clone using the README.
+  - ai-log/ contains only unedited, original-language session exports.
+
+  13. Implementation plan (about 17 hours)
+
+  ┌──────┬───────────────────────────────────────────────────────────┬───────┐
+  │ Step │                           Work                            │ Hours │
+  ├──────┼───────────────────────────────────────────────────────────┼───────┤
+  │ 1    │ Scaffold, database schema, first Vercel deploy            │ 1.5   │
+  ├──────┼───────────────────────────────────────────────────────────┼───────┤
+  │ 2    │ ETF verification from issuer sources, data file, data     │ 3     │
+  │      │ test                                                      │       │
+  ├──────┼───────────────────────────────────────────────────────────┼───────┤
+  │ 3    │ Calculator function, tests and UI                         │ 2     │
+  ├──────┼───────────────────────────────────────────────────────────┼───────┤
+  │ 4    │ Page sections, two variants, Czech copy, EU access note   │ 3.5   │
+  ├──────┼───────────────────────────────────────────────────────────┼───────┤
+  │ 5    │ Lead form, server action, thank-you page, privacy page    │ 2.5   │
+  ├──────┼───────────────────────────────────────────────────────────┼───────┤
+  │ 6    │ Guide PDF content, generation and gated download          │ 2     │
+  ├──────┼───────────────────────────────────────────────────────────┼───────┤
+  │ 7    │ Event tracking and funnel query                           │ 1.5   │
+  ├──────┼───────────────────────────────────────────────────────────┼───────┤
+  │ 8    │ README, docs, ad copy file, AI logs, phone QA, production │ 1.5   │
+  │      │  deploy                                                   │       │
+  └──────┴───────────────────────────────────────────────────────────┴───────┘
+
+❯ <ide_opened_file>The user opened the file
+  /Users/duman/Projects/clientelo/etf-landing/readme.md in the IDE. This may or
+  may not be related to the current task.</ide_opened_file>
+
+❯ The revised implementation plan is approved.
+
+  Start implementing the project, beginning with the initial application
+  scaffold.
+
+  For this first implementation step:
+  - Inspect the current Git status and repository before changing anything.
+  - Set up Next.js App Router, TypeScript, Tailwind CSS and the required
+    project configuration.
+  - Create the minimal application structure needed to run the project.
+  - Preserve the existing CLAUDE.md and unrelated files.
+  - Do not write or modify README.md; I will write it myself.
+  - Do not fabricate ETF data or placeholder claims that could be mistaken
+    for verified financial information.
+  - Install only the dependencies needed for this step.
+  - Run the available lint and production build checks.
+  - Report what changed, the commands to run the application, and any
+    remaining issues.
+
+  Do not create a Git commit automatically. I will review and commit the
+  changes myself.
+
+  Ran 5 shell commands (ctrl+o to expand)
+
+⏺ I've got the scaffold copied in and dependencies installed. Now checking if
+  next dev affects claude.md (since this Next.js version auto-manages AGENTS.md)
+  and reviewing the docs before writing the layout and page.
+
+  Ran 4 shell commands (ctrl+o to expand)
+
+⏺ Write(app/layout.tsx)
+  ⎿  Added 14 lines, removed 15 lines
+       1 -import type { Metadata } from "next";                          
+       2 -import { Geist, Geist_Mono } from "next/font/google";          
+       1 +import type { Metadata, Viewport } from "next";                
+       2 +import { Geist } from "next/font/google";                      
+       3  import "./globals.css";
+       4  
+       5 +// latin-ext is required for Czech diacritics (ě, š, č, ř, ž, ů
+         +, …).                                                          
+       6  const geistSans = Geist({
+       7    variable: "--font-geist-sans",
+       7 -  subsets: ["latin"],                                          
+       8 +  subsets: ["latin", "latin-ext"],                             
+       9  });
+      10  
+      10 -const geistMono = Geist_Mono({                                 
+      11 -  variable: "--font-geist-mono",                               
+      12 -  subsets: ["latin"],                                          
+      13 -});                                                            
+      14 -                                                               
+      11  export const metadata: Metadata = {
+      16 -  title: "Create Next App",                                    
+      17 -  description: "Generated by create next app",                 
+      12 +  title: "Srovnání amerických ETF",                            
+      13 +  description:                                                 
+      14 +    "Přehledné srovnání amerických ETF pro české investory. Str
+         +ánka je ve výstavbě.",                                         
+      15  };
+      16  
+      17 +export const viewport: Viewport = {                            
+      18 +  width: "device-width",                                       
+      19 +  initialScale: 1,                                             
+      20 +};                                                             
+      21 +                                                               
+      22  export default function RootLayout({ children }: LayoutProps<"/
+          ">) {
+      23    return (
+      22 -    <html                                                      
+      23 -      lang="en"                                                
+      24 -      className={`${geistSans.variable} ${geistMono.variable} h
+         --full antialiased`}                                            
+      25 -    >                                                          
+      26 -      <body className="min-h-full flex flex-col">{children}</bo
+         -dy>                                                            
+      24 +    <html lang="cs" className={`${geistSans.variable} h-full an
+         +tialiased`}>                                                   
+      25 +      <body className="flex min-h-full flex-col">{children}</bo
+         +dy>                                                            
+      26      </html>
+      27    );
+      28  }
+
+⏺ Write(app/page.tsx)
+  ⎿  Added 11 lines, removed 65 lines
+       1 -import Image from "next/image";                                
+       2 -                                                               
+       1 +// Scaffold placeholder. Intentionally contains no ETF data or 
+         +financial                                                      
+       2 +// claims; real content is added once the data is verified from
+         + issuer sources.                                               
+       3  export default function Home() {
+       4    return (
+       5 -    <div className="flex flex-col flex-1 items-center justify-c
+         -enter bg-zinc-50 font-sans dark:bg-black">                     
+       6 -      <main className="flex flex-1 w-full max-w-3xl flex-col it
+         -ems-center justify-between py-32 px-16 bg-white dark:bg-black s
+         -m:items-start">                                                
+       7 -        <Image                                                 
+       8 -          className="dark:invert h-5 w-[100px]"                
+       9 -          src="/next.svg"                                      
+      10 -          alt="Next.js logo"                                   
+      11 -          width={100}                                          
+      12 -          height={20}                                          
+      13 -          priority                                             
+      14 -        />                                                     
+      15 -        <div className="flex flex-col items-center gap-6 text-c
+         -enter sm:items-start sm:text-left">                            
+      16 -          <h1 className="max-w-xs text-3xl font-semibold leadin
+         -g-10 tracking-tight text-black dark:text-zinc-50">             
+      17 -            To get started, edit the{" "}                      
+      18 -            <code className="rounded bg-black/[.06] px-1.5 py-0
+         -.5 font-mono text-[0.9em] dark:bg-white/[.08]">                
+      19 -              page.tsx                                         
+      20 -            </code>{" "}                                       
+      21 -            file.                                              
+      22 -          </h1>                                                
+      23 -          <p className="max-w-md text-lg leading-8 text-zinc-60
+         -0 dark:text-zinc-400">                                         
+      24 -            Looking for a starting point or more instructions? 
+         -Head over to{" "}                                              
+      25 -            <a                                                 
+      26 -              href="https://vercel.com/templates?framework=next
+         -.js&utm_source=create-next-app&utm_medium=appdir-template-tw&ut
+         -m_campaign=create-next-app"                                    
+      27 -              className="font-medium text-zinc-950 dark:text-zi
+         -nc-50"                                                         
+      28 -            >                                                  
+      29 -              Templates                                        
+      30 -            </a>{" "}                                          
+      31 -            or the{" "}                                        
+      32 -            <a                                                 
+      33 -              href="https://nextjs.org/learn?utm_source=create-
+         -next-app&utm_medium=appdir-template-tw&utm_campaign=create-next
+         --app"                                                          
+      34 -              className="font-medium text-zinc-950 dark:text-zi
+         -nc-50"                                                         
+      35 -            >                                                  
+      36 -              Learning                                         
+      37 -            </a>{" "}                                          
+      38 -            center.                                            
+      39 -          </p>                                                 
+      40 -        </div>                                                 
+      41 -        <div className="flex flex-col gap-4 text-base font-medi
+         -um sm:flex-row">                                               
+      42 -          <a                                                   
+      43 -            className="flex h-12 w-full items-center justify-ce
+         -nter gap-2 rounded-full bg-foreground px-5 text-background tran
+         -sition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158
+         -px]"                                                           
+      44 -            href="https://vercel.com/new?utm_source=create-next
+         --app&utm_medium=appdir-template-tw&utm_campaign=create-next-app
+         -"                                                              
+      45 -            target="_blank"                                    
+      46 -            rel="noopener noreferrer"                          
+      47 -          >                                                    
+      48 -            <Image                                             
+      49 -              className="dark:invert h-[14px] w-4"             
+      50 -              src="/vercel.svg"                                
+      51 -              alt="Vercel logomark"                            
+      52 -              width={16}                                       
+      53 -              height={14}                                      
+      54 -            />                                                 
+      55 -            Deploy Now                                         
+      56 -          </a>                                                 
+      57 -          <a                                                   
+      58 -            className="flex h-12 w-full items-center justify-ce
+         -nter rounded-full border border-solid border-black/[.08] px-5 t
+         -ransition-colors hover:border-transparent hover:bg-black/[.04] 
+         -dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]" 
+      59 -            href="https://nextjs.org/docs?utm_source=create-nex
+         -t-app&utm_medium=appdir-template-tw&utm_campaign=create-next-ap
+         -p"                                                             
+      60 -            target="_blank"                                    
+      61 -            rel="noopener noreferrer"                          
+      62 -          >                                                    
+      63 -            Documentation                                      
+      64 -          </a>                                                 
+      65 -        </div>                                                 
+      66 -      </main>                                                  
+      67 -    </div>                                                     
+       5 +    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-
+         +col justify-center gap-4 px-4 py-16">                          
+       6 +      <h1 className="text-3xl font-semibold tracking-tight">   
+       7 +        Srovnání amerických ETF                                
+       8 +      </h1>                                                    
+       9 +      <p className="text-lg text-muted">                       
+      10 +        Stránku právě připravujeme. Srovnání fondů doplníme, ja
+         +kmile budou                                                    
+      11 +        všechny údaje ověřené ze zdrojů správců fondů.         
+      12 +      </p>                                                     
+      13 +    </main>                                                    
+      14    );
+      15  }
+
+⏺ Write(app/globals.css)
+  ⎿  Added 3 lines, removed 9 lines
+       3  :root {
+       4    --background: #ffffff;
+       5    --foreground: #171717;
+       6 +  --muted: #52525b;                                            
+       7  }
+       8  
+       9  @theme inline {
+      10    --color-background: var(--background);
+      11    --color-foreground: var(--foreground);
+      12 +  --color-muted: var(--muted);                                 
+      13    --font-sans: var(--font-geist-sans);
+      12 -  --font-mono: var(--font-geist-mono);                         
+      14  }
+      15  
+      15 -@media (prefers-color-scheme: dark) {                          
+      16 -  :root {                                                      
+      17 -    --background: #0a0a0a;                                     
+      18 -    --foreground: #ededed;                                     
+      19 -  }                                                            
+      20 -}                                                              
+      21 -                                                               
+      16  body {
+      17    background: var(--background);
+      18    color: var(--foreground);
+      25 -  font-family: Arial, Helvetica, sans-serif;                   
+      19 +  font-family: var(--font-sans), system-ui, sans-serif;        
+      20  }
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+⏺ The scaffold is done and verified: lint, type check and production build all
+  pass, and the built page serves the Czech placeholder.
+
+  What changed
+
+  I generated the Next.js scaffold in a temp folder and copied in only the
+  needed files, because running the generator in place would have overwritten
+  your readme.md. Your claude.md, readme.md, docs/ and ai-log/ are untouched,
+  and nothing is committed.
+
+  - Config: package.json, package-lock.json, tsconfig.json, next.config.ts,
+    eslint.config.mjs and .gitignore, all as generated (Next.js 16.4, React
+    19.3, Tailwind 4, TypeScript, ESLint).
+  - app/layout.tsx: lang="cs", Czech metadata, and the Geist font with the
+    latin-ext subset so Czech diacritics render.
+  - app/page.tsx: a Czech "under construction" placeholder with no ETF data or
+    financial claims.
+  - app/globals.css: trimmed to a light theme with three colour tokens.
+  - AGENTS.md: generated by Next.js. next dev re-creates it if deleted, so it is
+    simplest to commit it.
+
+  No dependencies beyond the generator's defaults were installed.
+
+  Commands
+
+  npm run dev      # dev server on http://localhost:3000
+  npm run lint     # ESLint
+  npm run build    # production build
+  npm run start    # serve the production build
+
+  Remaining issues
+
+  - Type check order: npx tsc --noEmit fails on a clean clone until next build
+    or next dev has run once, because the LayoutProps type is generated by
+    Next.js. npm run build does its own type check and passes.
+  - npm audit: it reports 5 high-severity findings, all in the ESLint tooling
+    chain (braces via eslint-config-next), which is dev-only. The offered fix
+    downgrades eslint-config-next to version 14, so I left it.
+  - Install script: npm flagged one unapproved install script (unrs-resolver, an
+    ESLint dependency). Lint works without it.
+  - claude.md is stale: it still says the repo has no stack. I left it alone as
+    you asked; say if you want it updated with the commands above.
+  - Not yet set up: Vitest, the database, and any Vercel deployment come in
+    later steps.
