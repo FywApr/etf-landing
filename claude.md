@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-A conversion-focused, mobile-first landing page for Czech retail investors comparing US-listed ETFs, deployable to Vercel. Only the scaffold and the ETF data layer exist so far; the landing page, fee calculator, lead form, database, analytics and PDF guide are not built yet.
+A conversion-focused, mobile-first landing page for Czech retail investors comparing US-listed ETFs, deployable to Vercel. Built so far: the ETF data layer, both landing routes, the comparison and the fee calculator. Not built yet: lead persistence (the form is a front-end stub that stores and sends nothing), database, analytics, PDF guide and deployment.
 
 ## Commands
 
@@ -43,6 +43,13 @@ Next.js 16 (App Router, Turbopack, Cache Components enabled), React 19, TypeScri
 - Expense ratios are stored as percent per year (`0.03` means 0.03 %). Use `expenseRatioFraction()` for calculations.
 - PRIIPs KID availability is unverified for all funds. Do not state that a fund lacks a KID because none was found.
 - When data changes, update the sources, `retrievedOn` and `asOf` dates and `docs/data-sources.md` together. `tests/etfs.test.ts` enforces the structure.
+
+## Landing pages
+
+- `/` (variant `compare`) and `/poplatky` (variant `fees`) both render `components/LandingPage.tsx`; the variant sets the hero and section order. Ad copy and its matching routes are in `docs/ad-copy.md`.
+- Only `FeeCalculator` and `LeadForm` are Client Components. The calculator receives `CalculatorFund[]` built on the server by `toCalculatorFund()`; do not import a second fund list or hardcode TER values in components.
+- `lib/calculator.ts` is the pure fee model (tested in `tests/calculator.test.ts`). `lib/format.ts` holds Czech number, currency and date formatting; `lib/etf-view.ts` holds Czech labels for data enums.
+- Page copy must not rank funds, quote performance, or state that a fund has or lacks a PRIIPs KID.
 
 ## Conventions
 

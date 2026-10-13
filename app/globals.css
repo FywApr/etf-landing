@@ -4,12 +4,30 @@
   --background: #ffffff;
   --foreground: #171717;
   --muted: #52525b;
+  --surface: #f5f6f8;
+  --line: #dfe2e8;
+  --accent: #0b5c4a;
+  --accent-strong: #08473a;
+  --accent-soft: #e6f2ee;
+  --warn: #8a4b0b;
+  --warn-soft: #fdf5e6;
+  --warn-line: #ecd3a2;
+  --danger: #b42318;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-warn-line: var(--warn-line);
+  --color-danger: var(--danger);
   --font-sans: var(--font-geist-sans);
 }
 
@@ -17,4 +35,20 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Anchored sections should not sit flush against the top of the viewport. */
+section[id] {
+  scroll-margin-top: 1rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
 }
