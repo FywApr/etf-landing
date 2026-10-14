@@ -11,6 +11,7 @@ import {
   type IssueCode,
   type ValidationIssue,
 } from "@/lib/calculator";
+import { trackOnce } from "@/lib/analytics/client";
 import { strategiesDiffer, type CalculatorFund } from "@/lib/etf-view";
 import { formatCzk, formatInteger, formatPercent, parseDecimalInput } from "@/lib/format";
 
@@ -248,10 +249,14 @@ export function FeeCalculator({ funds }: { funds: CalculatorFund[] }) {
       .find((issue) => issue.field === "form" || issue.field === "expenseRatio");
 
   const issueFor = (field: InputField) => inputIssues.find((issue) => issue.field === field);
-  const setValue = (field: InputField) => (value: string) =>
+  // Only the fact that the calculator was used is recorded, never the inputs.
+  const setValue = (field: InputField) => (value: string) => {
+    trackOnce("calculator_used");
     setValues((current) => ({ ...current, [field]: value }));
+  };
 
   const chooseFirst = (ticker: string) => {
+    trackOnce("calculator_used");
     setFirstTicker(ticker);
     if (ticker === secondTicker) setSecondTicker("");
   };
@@ -302,7 +307,10 @@ export function FeeCalculator({ funds }: { funds: CalculatorFund[] }) {
           value={secondTicker}
           funds={funds.filter((fund) => fund.ticker !== firstTicker)}
           emptyLabel="Bez srovnání"
-          onChange={setSecondTicker}
+          onChange={(ticker) => {
+            trackOnce("calculator_used");
+            setSecondTicker(ticker);
+          }}
         />
       </form>
 

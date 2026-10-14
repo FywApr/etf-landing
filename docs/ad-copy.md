@@ -24,4 +24,4 @@ Two ad variants, each pointing at its own route. Both routes render the same `La
 
 ## Visitor path
 
-Ad → matching first screen → comparison and calculator (both ungated) → guide section with the lead form. The lead form is not connected yet; it stores and sends nothing.
+Ad → matching first screen → comparison and calculator (both ungated) → guide section with the lead form → thank-you page (`/dekujeme`) with the download link → PDF guide. How each step is measured is described in `funnel.md`.

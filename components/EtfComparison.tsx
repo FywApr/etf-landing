@@ -1,3 +1,4 @@
+import { ComparisonViewMarker } from "@/components/Analytics";
 import {
   isVerified,
   sourcesFor,
@@ -247,6 +248,7 @@ export function EtfComparison({ funds }: { funds: Etf[] }) {
           živá tržní data.
         </p>
 
+        <ComparisonViewMarker />
         <ul className="mt-6 grid gap-3 md:hidden">
           {funds.map((etf) => (
             <FundCard key={etf.ticker} etf={etf} />

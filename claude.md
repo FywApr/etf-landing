@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-A conversion-focused, mobile-first landing page for Czech retail investors comparing US-listed ETFs, deployable to Vercel. Built so far: the ETF data layer, both landing routes, the comparison and the fee calculator. Not built yet: lead persistence (the form is a front-end stub that stores and sends nothing), database, analytics, PDF guide and deployment.
+A conversion-focused, mobile-first landing page for Czech retail investors comparing US-listed ETFs, deployable to Vercel. Built: the ETF data layer, both landing routes, the comparison, the fee calculator, lead capture on Neon Postgres, the token-protected PDF guide, first-party funnel analytics and the privacy notice. Not done: deployment, a visual redesign, and anything that needs real credentials (no database is provisioned).
 
 ## Commands
 
@@ -14,6 +14,8 @@ npm run build      # production build
 npm run lint       # ESLint
 npm run typecheck  # generates Next.js route types, then tsc --noEmit
 npm test           # Vitest, single run
+npm run db:check   # checks DATABASE_URL, retention config and migrations without printing values
+npm run retention:cleanup  # DELETES expired leads and events in the DATABASE_URL database
 npx vitest run tests/etfs.test.ts          # one test file
 npx vitest run -t "expense ratio"          # tests matching a name
 ```
@@ -22,7 +24,7 @@ Use `npm run typecheck`, not bare `tsc`: route types such as `LayoutProps` are g
 
 ## Stack
 
-Next.js 16 (App Router, Turbopack, Cache Components enabled), React 19, TypeScript, Tailwind CSS 4, Vitest. This Next.js version differs from older releases; follow `AGENTS.md` and read the bundled docs in `node_modules/next/dist/docs/` before using a Next.js API.
+Next.js 16 (App Router, Turbopack, Cache Components enabled), React 19, TypeScript, Tailwind CSS 4, Vitest, Zod, the Neon serverless driver and `@react-pdf/renderer`. PGlite is a dev dependency used only by tests. This Next.js version differs from older releases; follow `AGENTS.md` and read the bundled docs in `node_modules/next/dist/docs/` before using a Next.js API.
 
 ## Language rules
 
@@ -50,6 +52,22 @@ Next.js 16 (App Router, Turbopack, Cache Components enabled), React 19, TypeScri
 - Only `FeeCalculator` and `LeadForm` are Client Components. The calculator receives `CalculatorFund[]` built on the server by `toCalculatorFund()`; do not import a second fund list or hardcode TER values in components.
 - `lib/calculator.ts` is the pure fee model (tested in `tests/calculator.test.ts`). `lib/format.ts` holds Czech number, currency and date formatting; `lib/etf-view.ts` holds Czech labels for data enums.
 - Page copy must not rank funds, quote performance, or state that a fund has or lacks a PRIIPs KID.
+
+## Leads, guide and analytics
+
+Read `docs/operations.md` and `docs/funnel.md` before changing any of this.
+
+- **No personal data without configuration.** `getLeadCaptureConfig()` in `lib/config.ts` must succeed before anything is stored. Never add defaults for the controller details or the three retention periods, and never invent a controller.
+- **Database access** goes through `SqlExecutor` (`lib/db.ts`) with parameterised statements only. The Neon HTTP driver has no interactive transactions: anything that must be atomic is one SQL statement (see `UPSERT_LEAD_SQL` in `lib/leads.ts`).
+- **Retention** rules live in `lib/retention.ts` (also run directly by Node, so it may not use `@/` imports) and are described in `docs/operations.md` section 7 and the privacy notice; keep all three in step. A lead's last activity is `updated_at`, set only by a guide request.
+- **Schema** lives in `db/schema.sql` (fresh installs) and must stay idempotent. Existing databases are upgraded by forward-only files in `db/migrations/`; when you add one, update `db/schema.sql` to match and extend the migration test in `tests/retention.test.ts`. `db/funnel-report.sql` and `db/retention-cleanup.sql` are executed by the tests, so docs and code cannot drift.
+- **Tests run SQL for real** against PGlite via `tests/helpers/database.ts`. No test may require a remote database.
+- **Guide tokens:** only the SHA-256 hash is stored. Never log, store or put a token in an event or page path.
+- **Marketing consent** text and version are in `lib/consent.ts`; changing the text requires a new version (a test enforces it). A later submission must never clear existing consent.
+- **Events** are allow-listed in `lib/analytics/events.ts`. Never add email, form values, calculator inputs or results, tokens, IPs or user agents. `lead_created` and `guide_download` are server-only. The browser session ID lives in memory only: no cookies or storage.
+- **Logging:** use `logServerError()`; never log error messages, emails, tokens or request bodies.
+- `lib/lead-form.ts` is the only lead module a Client Component may import; `lib/leads.ts` is server-only.
+- The PDF is built in `lib/guide/GuideDocument.tsx` from `data/etfs.ts` with the bundled Noto Sans fonts in `assets/fonts/` (SIL OFL). It is rendered on request and never written to `public/`.
 
 ## Conventions
 

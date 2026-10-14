@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
+import { PageViewTracker } from "@/components/Analytics";
 import "./globals.css";
 
 // latin-ext is required for Czech diacritics (ě, š, č, ř, ž, ů, …).
@@ -11,7 +12,7 @@ const geistSans = Geist({
 export const metadata: Metadata = {
   title: "Srovnání amerických ETF",
   description:
-    "Přehledné srovnání amerických ETF pro české investory. Stránka je ve výstavbě.",
+    "Srovnání vybraných amerických ETF a kalkulačka poplatků pro české investory.",
 };
 
 export const viewport: Viewport = {
@@ -22,7 +23,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="cs" className={`${geistSans.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        <PageViewTracker />
+        {children}
+      </body>
     </html>
   );
 }

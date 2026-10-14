@@ -1,19 +1,29 @@
 import Link from "next/link";
 import { etfs } from "@/data/etfs";
+import { TrackedLink } from "@/components/Analytics";
 import { EtfComparison } from "@/components/EtfComparison";
 import { FeeCalculator } from "@/components/FeeCalculator";
 import { LeadForm } from "@/components/LeadForm";
 import { isEqualWeight, snapshotDate, toCalculatorFund } from "@/lib/etf-view";
+import type { CTA_TARGETS } from "@/lib/analytics/events";
 import { formatDate, formatPercent } from "@/lib/format";
 
 export type LandingVariant = "compare" | "fees";
+
+type CtaTarget = (typeof CTA_TARGETS)[number];
+
+interface SectionLink {
+  label: string;
+  href: string;
+  target: CtaTarget;
+}
 
 interface HeroContent {
   eyebrow: string;
   headline: string;
   text: string;
-  primary: { label: string; href: string };
-  secondary: { label: string; href: string };
+  primary: SectionLink;
+  secondary: SectionLink;
 }
 
 // Headline, text and primary CTA mirror the ad for each route; see docs/ad-copy.md.
@@ -22,22 +32,22 @@ const HERO: Record<LandingVariant, HeroContent> = {
     eyebrow: "Srovnání ETF kotovaných v USA",
     headline: "Americká ETF v jedné tabulce",
     text: "Porovnejte poplatky, burzu a dostupnost vybraných amerických ETF. Česky a s odkazy na zdroje.",
-    primary: { label: "Zobrazit srovnání", href: "#srovnani" },
-    secondary: { label: "Spočítat poplatky", href: "#kalkulacka" },
+    primary: { label: "Zobrazit srovnání", href: "#srovnani", target: "comparison" },
+    secondary: { label: "Spočítat poplatky", href: "#kalkulacka", target: "calculator" },
   },
   fees: {
     eyebrow: "Kalkulačka poplatků ETF",
     headline: "Kolik vás stojí poplatky ETF za 20 let?",
     text: "Zadejte vklad a horizont. Kalkulačka ukáže, jak se poplatky mohou projevit na konečné hodnotě investice.",
-    primary: { label: "Spočítat poplatky", href: "#kalkulacka" },
-    secondary: { label: "Zobrazit srovnání", href: "#srovnani" },
+    primary: { label: "Spočítat poplatky", href: "#kalkulacka", target: "calculator" },
+    secondary: { label: "Zobrazit srovnání", href: "#srovnani", target: "comparison" },
   },
 };
 
-const NAV_LINKS = [
-  { label: "Srovnání", href: "#srovnani" },
-  { label: "Kalkulačka", href: "#kalkulacka" },
-  { label: "Průvodce", href: "#pruvodce" },
+const NAV_LINKS: SectionLink[] = [
+  { label: "Srovnání", href: "#srovnani", target: "comparison" },
+  { label: "Kalkulačka", href: "#kalkulacka", target: "calculator" },
+  { label: "Průvodce", href: "#pruvodce", target: "guide" },
 ];
 
 function SiteHeader() {
@@ -51,12 +61,14 @@ function SiteHeader() {
           <ul className="flex items-center gap-1 text-sm">
             {NAV_LINKS.map((link, index) => (
               <li key={link.href} className={index === 2 ? "hidden sm:block" : undefined}>
-                <a
+                <TrackedLink
                   href={link.href}
+                  placement="header_nav"
+                  target={link.target}
                   className="inline-flex h-11 items-center rounded-md px-2.5 text-muted hover:bg-surface hover:text-foreground"
                 >
                   {link.label}
-                </a>
+                </TrackedLink>
               </li>
             ))}
           </ul>
@@ -76,18 +88,22 @@ function Hero({ variant }: { variant: LandingVariant }) {
       </h1>
       <p className="mt-3 text-base text-muted md:text-lg">{content.text}</p>
       <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2">
-        <a
+        <TrackedLink
           href={content.primary.href}
+          placement="hero_primary"
+          target={content.primary.target}
           className="inline-flex h-12 items-center rounded-md bg-accent px-5 text-base font-semibold text-white hover:bg-accent-strong"
         >
           {content.primary.label}
-        </a>
-        <a
+        </TrackedLink>
+        <TrackedLink
           href={content.secondary.href}
+          placement="hero_secondary"
+          target={content.secondary.target}
           className="inline-flex h-11 items-center font-medium text-accent underline underline-offset-4 hover:text-accent-strong"
         >
           {content.secondary.label}
-        </a>
+        </TrackedLink>
       </div>
     </div>
   );
@@ -211,11 +227,11 @@ function GuideSection() {
     <section id="pruvodce" aria-labelledby="pruvodce-heading" className="bg-surface py-12 md:py-16">
       <div className="mx-auto grid w-full max-w-5xl gap-8 px-4 md:grid-cols-2">
         <div>
-          <p className="text-sm font-medium text-accent">Připravujeme · zdarma</p>
+          <p className="text-sm font-medium text-accent">Zdarma ke stažení</p>
           <h2 id="pruvodce-heading" className="mt-2 text-2xl font-semibold tracking-tight">
             Průvodce americkými ETF pro české investory
           </h2>
-          <p className="mt-3 text-muted">Bezplatný průvodce ve formátu PDF bude obsahovat:</p>
+          <p className="mt-3 text-muted">Bezplatný průvodce ve formátu PDF obsahuje:</p>
           <ol className="mt-3 list-decimal space-y-2 pl-5">
             <li>Rozšířené srovnání ETF s odkazy na zdroje.</li>
             <li>
@@ -259,6 +275,14 @@ function SiteFooter() {
               >
                 Dostupnost a metodika
               </a>
+            </li>
+            <li>
+              <Link
+                href="/ochrana-osobnich-udaju"
+                className="inline-flex h-11 items-center underline underline-offset-4"
+              >
+                Ochrana osobních údajů
+              </Link>
             </li>
           </ul>
         </nav>
