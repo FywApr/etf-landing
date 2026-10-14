@@ -1,6 +1,7 @@
 // Server-side recording of funnel events.
 
 import type { SqlExecutor } from "@/lib/db";
+import { checkRateLimit } from "@/lib/rate-limit";
 import {
   MAX_EVENT_BODY_BYTES,
   clientEventSchema,
@@ -43,7 +44,7 @@ export async function insertEvent(sql: SqlExecutor, event: StoredEvent): Promise
   ]);
 }
 
-export type EventRequestStatus = 204 | 400 | 413 | 503;
+export type EventRequestStatus = 204 | 400 | 403 | 413 | 415 | 429 | 503;
 
 /**
  * Handles one request to the public events endpoint. Returns only a status
@@ -52,6 +53,7 @@ export type EventRequestStatus = 204 | 400 | 413 | 503;
 export async function handleClientEventRequest(
   body: string,
   sql: SqlExecutor | null,
+  clientKey: string | null = null,
 ): Promise<EventRequestStatus> {
   if (Buffer.byteLength(body, "utf8") > MAX_EVENT_BODY_BYTES) return 413;
 
@@ -65,6 +67,9 @@ export async function handleClientEventRequest(
   const parsed = clientEventSchema.safeParse(json);
   if (!parsed.success) return 400;
   if (!sql) return 503;
+
+  const limit = await checkRateLimit(sql, "events", clientKey);
+  if (!limit.allowed) return 429;
 
   await insertEvent(sql, parsed.data);
   return 204;

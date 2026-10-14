@@ -19,7 +19,7 @@ First-party event tracking stored in the `funnel_events` table. No external anal
 | `cta_click` | Browser | A hero button or header navigation link is clicked | `placement`: `hero_primary`, `hero_secondary`, `header_nav`; `target`: `comparison`, `calculator`, `guide` |
 | `form_start` | Browser | First focus inside the lead form; once per session | none |
 | `form_submit` | Browser | The form passes client-side checks and is sent to the server | none |
-| `form_error` | Browser | A client or server error is shown | `category`: `email_missing`, `email_invalid`, `unavailable`, `rejected`, `server` |
+| `form_error` | Browser | A client or server error is shown | `category`: `email_missing`, `email_invalid`, `unavailable`, `rejected`, `rate_limited`, `server` |
 | `lead_created` | Server | In the same SQL statement that creates or refreshes the lead | `lead_status`: `new` or `refreshed` |
 | `guide_download` | Server | After the token is validated and the PDF is generated | none |
 
@@ -62,6 +62,7 @@ from leads group by variant;
 - **Downloads after a reload.** `guide_download` is attributed to the session stored on the lead. If the visitor reloads the thank-you page first, the download still counts for the session that submitted the form.
 - **Lost events.** Events are sent with `navigator.sendBeacon` (falling back to `fetch`) and failures are ignored, so ad blockers and network errors cause undercounting. Browser events are also lost if `DATABASE_URL` is not configured.
 - **Deduplication.** Each event carries a random `event_id` with a unique index; a repeated delivery of the same event is ignored. Two separate events with different IDs are both stored.
-- **No rate limiting.** The endpoint validates and size-limits requests (2 KB) but does not limit their rate, and it does not verify that a request comes from a real browser. Anyone can post well-formed fake events. Before launch, add rate limiting at the platform level (for example the Vercel Firewall) and treat the numbers as indicative.
+- **Abuse.** The endpoint accepts only same-origin JSON up to 2 KB and is rate-limited: 3000 events per minute globally, plus 120 per minute per client on Vercel with `RATE_LIMIT_SECRET` set (see `operations.md` section 8). It cannot prove that a request comes from a real browser, so well-formed fake events within those limits are still possible. Treat the numbers as indicative.
+- **Rate-limited events are lost.** Above the limits events are refused (429) and not stored.
 - **Timestamps** are set by the database when the event arrives, not by the browser.
 - **Retention.** Events are deleted `FUNNEL_EVENT_RETENTION_DAYS` (proposed 90) days after `occurred_at` by `npm run retention:cleanup`; see `operations.md`. Reports therefore cover at most that window, and deleted events cannot be recovered for historical reports. Without that variable set, events are not recorded at all.

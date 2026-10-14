@@ -96,3 +96,16 @@ create index if not exists funnel_events_name_occurred_at_idx on funnel_events (
 create index if not exists funnel_events_session_id_idx on funnel_events (session_id);
 create index if not exists funnel_events_variant_campaign_idx on funnel_events (variant, utm_campaign);
 create index if not exists funnel_events_occurred_at_idx on funnel_events (occurred_at);
+
+-- Fixed-window request counters for rate limiting (lib/rate-limit.ts).
+-- client_key is '*' for the global counter, or a keyed HMAC of the client IP
+-- (never the IP itself). Rows are deleted after 24 hours.
+create table if not exists rate_limits (
+  bucket text not null check (bucket in ('lead', 'guide', 'events')),
+  client_key text not null check (client_key = '*' or client_key ~ '^[0-9a-f]{32}$'),
+  window_start timestamptz not null,
+  hits integer not null default 1 check (hits > 0),
+  primary key (bucket, client_key, window_start)
+);
+
+create index if not exists rate_limits_window_start_idx on rate_limits (window_start);

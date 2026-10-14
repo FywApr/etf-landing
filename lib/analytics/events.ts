@@ -20,6 +20,7 @@ export const FORM_ERROR_CATEGORIES = [
   "email_invalid",
   "unavailable",
   "rejected",
+  "rate_limited",
   "server",
 ] as const;
 export const LEAD_STATUSES = ["new", "refreshed"] as const;

@@ -3,6 +3,18 @@ import { handleClientEventRequest, type EventRequestStatus } from "@/lib/analyti
 import { getEventStoreUrl } from "@/lib/config";
 import { createSqlExecutor } from "@/lib/db";
 import { logServerError } from "@/lib/log";
+import { clientKeyFromHeaders } from "@/lib/rate-limit";
+
+/** A browser always sends Origin on a POST; reject other sites' pages. */
+function isCrossOrigin(request: Request): boolean {
+  const origin = request.headers.get("origin");
+  if (!origin) return false;
+  try {
+    return new URL(origin).host !== request.headers.get("host");
+  } catch {
+    return true;
+  }
+}
 
 // Public endpoint for browser funnel events. Responses carry a status code and
 // nothing else; request bodies are never logged.
@@ -10,7 +22,11 @@ export async function POST(request: Request): Promise<Response> {
   let status: EventRequestStatus;
 
   const declaredLength = Number(request.headers.get("content-length") ?? "0");
-  if (declaredLength > MAX_EVENT_BODY_BYTES) {
+  if (isCrossOrigin(request)) {
+    status = 403;
+  } else if (!request.headers.get("content-type")?.startsWith("application/json")) {
+    status = 415;
+  } else if (declaredLength > MAX_EVENT_BODY_BYTES) {
     status = 413;
   } else {
     try {
@@ -20,6 +36,7 @@ export async function POST(request: Request): Promise<Response> {
       status = await handleClientEventRequest(
         await request.text(),
         databaseUrl ? createSqlExecutor(databaseUrl) : null,
+        clientKeyFromHeaders(request.headers),
       );
     } catch (error) {
       logServerError("events", error);

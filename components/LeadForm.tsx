@@ -15,6 +15,8 @@ const ERROR_MESSAGES: Record<LeadErrorCode, string> = {
   unavailable:
     "Formulář je dočasně nedostupný a váš e-mail jsme neuložili. Zkuste to prosím později.",
   rejected: "Odeslání se nezdařilo. Počkejte chvíli a zkuste to prosím znovu.",
+  rate_limited:
+    "Z vašeho připojení přišlo příliš mnoho pokusů. Zkuste to prosím znovu za několik minut.",
   server: "Odeslání se nezdařilo a váš e-mail jsme neuložili. Zkuste to prosím znovu.",
 };
 

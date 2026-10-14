@@ -20,3 +20,7 @@ where retention_expires_at < now()
 -- Events are removed by age, whether or not a related lead still exists.
 delete from funnel_events
 where occurred_at < now() - make_interval(days => 90);
+
+-- Rate-limit counters (pseudonymous client keys) are kept for 24 hours.
+delete from rate_limits
+where window_start < now() - interval '24 hours';

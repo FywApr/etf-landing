@@ -157,8 +157,9 @@ describe("public events endpoint", () => {
     const sql = okSql();
     const payload = event({ name: "cta_click", properties: { placement: "header_nav", target: "guide" } });
     expect(await handleClientEventRequest(JSON.stringify(payload), sql)).toBe(204);
-    expect(sql).toHaveBeenCalledTimes(1);
-    const [text, params] = sql.mock.calls[0];
+    const inserts = sql.mock.calls.filter(([text]) => text.includes("insert into funnel_events"));
+    expect(inserts).toHaveLength(1);
+    const [text, params] = inserts[0];
     expect(text).toContain("on conflict (event_id) do nothing");
     expect(text).not.toContain(payload.sessionId);
     expect(params).toContain(payload.sessionId);
@@ -183,6 +184,14 @@ describe("public events endpoint", () => {
     const body = JSON.stringify(event({ padding: "x".repeat(MAX_EVENT_BODY_BYTES) }));
     expect(await handleClientEventRequest(body, sql)).toBe(413);
     expect(sql).not.toHaveBeenCalled();
+  });
+
+  it("answers 429 and stores nothing when the events rate limit is exceeded", async () => {
+    const sql = vi.fn<SqlExecutor>(async (text) =>
+      text.includes("rate_limits") ? [{ client_key: "*", hits: 100000, seconds_left: 10 }] : [],
+    );
+    expect(await handleClientEventRequest(JSON.stringify(event()), sql)).toBe(429);
+    expect(sql.mock.calls.some(([text]) => text.includes("insert into funnel_events"))).toBe(false);
   });
 
   it("reports unavailability when no database is configured", async () => {

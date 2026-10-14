@@ -87,6 +87,24 @@ export const DELETE_EXPIRED_EVENTS_SQL = `
   )
   select count(*)::int as deleted from deleted`;
 
+/** Rate-limit counters hold a pseudonymous client key; they are kept this long. */
+export const RATE_LIMIT_RECORD_HOURS = 24;
+
+export const DELETE_EXPIRED_RATE_LIMITS_SQL = `
+  with due as (
+    select bucket, client_key, window_start from rate_limits
+    where window_start < now() - make_interval(hours => $1::int)
+    limit $2::int
+    for update skip locked
+  ),
+  deleted as (
+    delete from rate_limits r using due
+    where r.bucket = due.bucket and r.client_key = due.client_key
+      and r.window_start = due.window_start
+    returning 1
+  )
+  select count(*)::int as deleted from deleted`;
+
 export interface CleanupOptions {
   batchSize?: number;
   /** Upper bound on batches per table, so one run cannot loop forever. */
@@ -97,10 +115,11 @@ export interface CleanupResult {
   ok: boolean;
   leadsDeleted: number;
   eventsDeleted: number;
+  rateLimitRowsDeleted: number;
   /** False if a table still had expired rows when maxBatches was reached. */
   complete: boolean;
   /** Which step failed, when ok is false. Never contains row data. */
-  failedStep?: "leads" | "events";
+  failedStep?: "leads" | "events" | "rate_limits";
   error?: unknown;
 }
 
@@ -119,7 +138,8 @@ async function deleteInBatches(
 }
 
 /**
- * Deletes expired leads, then expired funnel events. Returns counts only. On a
+ * Deletes expired leads, then expired funnel events, then old rate-limit
+ * counters. Returns counts only. On a
  * database error it stops and reports how far it got; rows already deleted in
  * earlier batches stay deleted.
  */
@@ -129,7 +149,13 @@ export async function runRetentionCleanup(
   { batchSize = 1000, maxBatches = 100 }: CleanupOptions = {},
 ): Promise<CleanupResult> {
   const count = (rows: Record<string, unknown>[]) => Number(rows[0]?.deleted ?? 0);
-  const result: CleanupResult = { ok: true, leadsDeleted: 0, eventsDeleted: 0, complete: true };
+  const result: CleanupResult = {
+    ok: true,
+    leadsDeleted: 0,
+    eventsDeleted: 0,
+    rateLimitRowsDeleted: 0,
+    complete: true,
+  };
 
   try {
     const leads = await deleteInBatches(
@@ -160,6 +186,19 @@ export async function runRetentionCleanup(
     result.complete &&= events.complete;
   } catch (error) {
     return { ...result, ok: false, complete: false, failedStep: "events", error };
+  }
+
+  try {
+    const counters = await deleteInBatches(
+      async () =>
+        count(await sql(DELETE_EXPIRED_RATE_LIMITS_SQL, [RATE_LIMIT_RECORD_HOURS, batchSize])),
+      batchSize,
+      maxBatches,
+    );
+    result.rateLimitRowsDeleted = counters.deleted;
+    result.complete &&= counters.complete;
+  } catch (error) {
+    return { ...result, ok: false, complete: false, failedStep: "rate_limits", error };
   }
 
   return result;

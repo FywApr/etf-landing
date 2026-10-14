@@ -12,6 +12,7 @@ import { saveLead, type ValidLead } from "@/lib/leads";
 import {
   DELETE_EXPIRED_EVENTS_SQL,
   DELETE_EXPIRED_LEADS_SQL,
+  DELETE_EXPIRED_RATE_LIMITS_SQL,
   RETENTION_ENV,
   getRetentionConfig,
   runRetentionCleanup,
@@ -221,7 +222,13 @@ describe("retention in the database", () => {
 
       const result = await runRetentionCleanup(db.sql, POLICY);
 
-      expect(Object.keys(result).sort()).toEqual(["complete", "eventsDeleted", "leadsDeleted", "ok"]);
+      expect(Object.keys(result).sort()).toEqual([
+        "complete",
+        "eventsDeleted",
+        "leadsDeleted",
+        "ok",
+        "rateLimitRowsDeleted",
+      ]);
       expect(JSON.stringify(result)).not.toContain("private");
     });
 
@@ -334,37 +341,42 @@ describe("cleanup failures", () => {
     expect(sql.mock.calls).toEqual([
       [DELETE_EXPIRED_LEADS_SQL, [30, 365, 500]],
       [DELETE_EXPIRED_EVENTS_SQL, [90, 500]],
+      [DELETE_EXPIRED_RATE_LIMITS_SQL, [24, 500]],
     ]);
   });
 });
 
-describe("migration 001", () => {
+describe("migrations", () => {
   async function shape(db: TestDatabase) {
     const columns = await db.sql(
       `select table_name, column_name, data_type, is_nullable, column_default
        from information_schema.columns
-       where table_name in ('leads', 'funnel_events') order by table_name, column_name`,
+       where table_name in ('leads', 'funnel_events', 'rate_limits')
+       order by table_name, column_name`,
       [],
     );
     const constraints = await db.sql(
       `select conrelid::regclass::text as t, conname, pg_get_constraintdef(oid) as def
-       from pg_constraint where conrelid in ('leads'::regclass, 'funnel_events'::regclass)
+       from pg_constraint
+       where conrelid in (
+         select oid from pg_class where relname in ('leads', 'funnel_events', 'rate_limits'))
        order by 1, 2`,
       [],
     );
     const indexes = await db.sql(
       `select indexname, indexdef from pg_indexes
-       where tablename in ('leads', 'funnel_events') order by 1`,
+       where tablename in ('leads', 'funnel_events', 'rate_limits') order by 1`,
       [],
     );
     return { columns, constraints, indexes };
   }
 
-  it("upgrades the first schema to exactly the current fresh schema", async () => {
+  it("upgrade the first schema to exactly the current fresh schema", async () => {
     const fresh = await createTestDatabase(["schema.sql"]);
     const migrated = await createTestDatabase([
       "tests/fixtures/schema-v1.sql",
       "migrations/001_bounded_retention.sql",
+      "migrations/002_rate_limits.sql",
     ]);
     expect(await shape(migrated)).toEqual(await shape(fresh));
     await fresh.close();
@@ -410,13 +422,27 @@ describe("migration 001", () => {
     await db.close();
   });
 
-  it("contains no destructive statements", () => {
-    const migration = read("db/migrations/001_bounded_retention.sql")
-      .split("\n")
-      .filter((line) => !line.trim().startsWith("--"))
-      .join("\n")
-      .toLowerCase();
-    expect(migration).not.toMatch(/\bdelete\b|\btruncate\b|drop\s+table|drop\s+column/);
+  it.each(["001_bounded_retention.sql", "002_rate_limits.sql"])(
+    "%s contains no destructive statements",
+    (file) => {
+      const migration = read(`db/migrations/${file}`)
+        .split("\n")
+        .filter((line) => !line.trim().startsWith("--"))
+        .join("\n")
+        .toLowerCase();
+      expect(migration).not.toMatch(/\bdelete\b|\btruncate\b|drop\s+table|drop\s+column/);
+    },
+  );
+
+  it("002 can be run twice and creates an empty table", async () => {
+    const db = await createTestDatabase([
+      "tests/fixtures/schema-v1.sql",
+      "migrations/001_bounded_retention.sql",
+    ]);
+    await db.exec(readSql("migrations/002_rate_limits.sql"));
+    await db.exec(readSql("migrations/002_rate_limits.sql"));
+    expect(await db.sql("select count(*)::int as n from rate_limits", [])).toEqual([{ n: 0 }]);
+    await db.close();
   });
 });
 

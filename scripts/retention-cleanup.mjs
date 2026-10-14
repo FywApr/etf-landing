@@ -32,6 +32,7 @@ const result = await runRetentionCleanup(
 
 console.log(`Leads deleted: ${result.leadsDeleted}`);
 console.log(`Funnel events deleted: ${result.eventsDeleted}`);
+console.log(`Rate-limit counters deleted: ${result.rateLimitRowsDeleted}`);
 
 if (!result.ok) {
   // Error messages can contain row data or the host name; print class and code only.

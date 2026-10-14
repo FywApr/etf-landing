@@ -16,6 +16,7 @@ import { createSqlExecutor, type SqlExecutor } from "@/lib/db";
 import { GUIDE_TOKEN_TTL_DAYS, generateGuideToken, type GuideToken } from "@/lib/guide-token";
 import type { LeadErrorCode } from "@/lib/lead-form";
 import { logServerError } from "@/lib/log";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export type LeadResult = { ok: true; token: string } | { ok: false; error: LeadErrorCode };
 
@@ -42,6 +43,8 @@ export interface LeadDeps {
   now?: () => number;
   createSql?: (databaseUrl: string) => SqlExecutor;
   generateToken?: () => GuideToken;
+  /** Pseudonymous client key for per-client rate limiting, or null. */
+  clientKey?: string | null;
 }
 
 // One statement, therefore atomic: the lead is created or refreshed and the
@@ -209,6 +212,10 @@ export async function processLeadSubmission(
   const { token, hash } = (deps.generateToken ?? generateGuideToken)();
   try {
     const sql = (deps.createSql ?? createSqlExecutor)(config.config.databaseUrl);
+    // Counted only for submissions that would reach the database: invalid
+    // input above is rejected without touching it.
+    const limit = await checkRateLimit(sql, "lead", deps.clientKey ?? null);
+    if (!limit.allowed) return { ok: false, error: "rate_limited" };
     await saveLead(
       sql,
       {

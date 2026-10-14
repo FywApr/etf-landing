@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import Link from "next/link";
+import { unstable_rethrow } from "next/navigation";
 import { Suspense } from "react";
 import { SimplePage } from "@/components/SimplePage";
 import { getDatabaseUrl } from "@/lib/config";
 import { createSqlExecutor } from "@/lib/db";
+import { guideCookieName } from "@/lib/guide-cookie";
 import { findGuideAccess } from "@/lib/guide/download";
 import { GUIDE_TOKEN_TTL_DAYS, isWellFormedGuideToken } from "@/lib/guide-token";
 import { logServerError } from "@/lib/log";
@@ -23,20 +26,22 @@ async function checkAccess(token: unknown): Promise<AccessState> {
   try {
     return (await findGuideAccess(createSqlExecutor(databaseUrl), token)) ? "valid" : "invalid";
   } catch (error) {
+    // Next.js aborts I/O when a prerender pass ends and expects that rejection
+    // to propagate. The Neon driver wraps it, so check the wrapped error too.
+    unstable_rethrow(error);
+    if (error instanceof Error && "sourceError" in error) unstable_rethrow(error.sourceError);
     logServerError("thank-you", error);
     return "unavailable";
   }
 }
 
-async function GuideAccess({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const { t: token } = await searchParams;
+// The token is read from the HttpOnly cookie set by the lead form; this page's
+// URL never contains it.
+async function GuideAccess() {
+  const token = (await cookies()).get(guideCookieName())?.value;
   const state = await checkAccess(token);
 
-  if (state === "valid" && typeof token === "string") {
+  if (state === "valid") {
     return (
       <>
         <h1 className="text-3xl font-semibold tracking-tight">Děkujeme, průvodce je připraven</h1>
@@ -46,7 +51,7 @@ async function GuideAccess({
         </p>
         <p className="mt-6">
           <a
-            href={`/api/guide?token=${encodeURIComponent(token)}`}
+            href="/api/guide"
             download
             className="inline-flex h-12 items-center rounded-md bg-accent px-5 text-base font-semibold text-white hover:bg-accent-strong"
           >
@@ -54,8 +59,8 @@ async function GuideAccess({
           </a>
         </p>
         <p className="mt-4 text-sm text-muted">
-          Odkaz na této stránce platí {GUIDE_TOKEN_TTL_DAYS} dní. Poté si o průvodce můžete
-          požádat znovu.
+          V tomto prohlížeči si průvodce můžete stáhnout po dobu {GUIDE_TOKEN_TTL_DAYS} dní. Poté
+          si o něj můžete požádat znovu.
         </p>
       </>
     );
@@ -64,11 +69,11 @@ async function GuideAccess({
   return (
     <>
       <h1 className="text-3xl font-semibold tracking-tight">
-        {state === "invalid" ? "Odkaz není platný" : "Průvodce je dočasně nedostupný"}
+        {state === "invalid" ? "Přístup k průvodci není platný" : "Průvodce je dočasně nedostupný"}
       </h1>
       <p className="mt-3 text-muted">
         {state === "invalid"
-          ? "Odkaz je neplatný nebo jeho platnost vypršela. O průvodce si můžete požádat znovu."
+          ? "Přístup vypršel nebo v tomto prohlížeči není k dispozici. O průvodce si můžete požádat znovu."
           : "Zkuste to prosím za chvíli znovu."}
       </p>
       <p className="mt-6">
@@ -83,11 +88,11 @@ async function GuideAccess({
   );
 }
 
-export default function ThankYouPage({ searchParams }: PageProps<"/dekujeme">) {
+export default function ThankYouPage() {
   return (
     <SimplePage>
       <Suspense fallback={<p className="text-muted">Ověřujeme odkaz…</p>}>
-        <GuideAccess searchParams={searchParams} />
+        <GuideAccess />
       </Suspense>
     </SimplePage>
   );

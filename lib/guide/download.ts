@@ -6,6 +6,7 @@ import { insertEvent } from "@/lib/analytics/store";
 import type { SqlExecutor } from "@/lib/db";
 import { hashGuideToken, isWellFormedGuideToken } from "@/lib/guide-token";
 import { logServerError } from "@/lib/log";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export interface GuideAccess {
   sessionId: string;
@@ -45,6 +46,7 @@ export async function findGuideAccess(sql: SqlExecutor, token: unknown): Promise
 export type GuideDownloadResult =
   | { status: "ok"; pdf: Buffer }
   | { status: "not_found" }
+  | { status: "rate_limited"; retryAfterSeconds: number }
   | { status: "unavailable" };
 
 export interface GuideDownloadDeps {
@@ -52,6 +54,8 @@ export interface GuideDownloadDeps {
   renderPdf: () => Promise<Buffer>;
   /** False when no event retention period is configured: then nothing is recorded. */
   recordEvent?: boolean;
+  /** Pseudonymous client key for per-client rate limiting, or null. */
+  clientKey?: string | null;
 }
 
 /**
@@ -62,10 +66,13 @@ export interface GuideDownloadDeps {
  */
 export async function handleGuideDownload(
   token: unknown,
-  { sql, renderPdf, recordEvent = true }: GuideDownloadDeps,
+  { sql, renderPdf, recordEvent = true, clientKey = null }: GuideDownloadDeps,
 ): Promise<GuideDownloadResult> {
   if (!isWellFormedGuideToken(token)) return { status: "not_found" };
   if (!sql) return { status: "unavailable" };
+
+  const limit = await checkRateLimit(sql, "guide", clientKey);
+  if (!limit.allowed) return { status: "rate_limited", retryAfterSeconds: limit.retryAfterSeconds };
 
   let access: GuideAccess | null;
   try {

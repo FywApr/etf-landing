@@ -28,6 +28,13 @@ function submission(overrides: Partial<LeadSubmission> = {}): LeadSubmission {
   };
 }
 
+/** The lead upsert among the recorded calls (a rate-limit query runs first). */
+function upsert(sql: ReturnType<typeof vi.fn<SqlExecutor>>) {
+  const calls = sql.mock.calls.filter(([text]) => text.includes("insert into leads"));
+  expect(calls).toHaveLength(1);
+  return calls[0];
+}
+
 function setup(sqlImpl?: SqlExecutor) {
   const sql = vi.fn<SqlExecutor>(sqlImpl ?? (async () => [{ inserted: true }]));
   const createSql = vi.fn(() => sql);
@@ -58,8 +65,7 @@ describe("processLeadSubmission", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(sql).toHaveBeenCalledTimes(1);
-    const [text, params] = sql.mock.calls[0];
+    const [text, params] = upsert(sql);
     expect(params[0]).toBe("jana.novakova@example.com");
     expect(params[1]).toBe(hashGuideToken(result.token));
     // The plaintext token and the email never appear in the SQL text or as a stored value.
@@ -71,7 +77,7 @@ describe("processLeadSubmission", () => {
   it("stores no consent metadata when the box is not ticked", async () => {
     const { sql, deps } = setup();
     await processLeadSubmission(submission({ marketingConsent: false }), deps);
-    const params = sql.mock.calls[0][1];
+    const params = upsert(sql)[1];
     expect(params[3]).toBe(false);
     expect(params[4]).toBeNull();
   });
@@ -79,7 +85,7 @@ describe("processLeadSubmission", () => {
   it("stores the exact consent text version when consent is given", async () => {
     const { sql, deps } = setup();
     await processLeadSubmission(submission({ marketingConsent: true }), deps);
-    const params = sql.mock.calls[0][1];
+    const params = upsert(sql)[1];
     expect(params[3]).toBe(true);
     expect(params[4]).toBe(MARKETING_CONSENT.version);
   });
@@ -89,7 +95,7 @@ describe("processLeadSubmission", () => {
     async (value) => {
       const { sql, deps } = setup();
       await processLeadSubmission(submission({ marketingConsent: value }), deps);
-      expect(sql.mock.calls[0][1][3]).toBe(false);
+      expect(upsert(sql)[1][3]).toBe(false);
     },
   );
 
@@ -113,7 +119,7 @@ describe("processLeadSubmission", () => {
       ...deps,
       env: { ...TEST_ENV, LEAD_RETENTION_DAYS: "45", CONSENTED_LEAD_RETENTION_DAYS: "200" },
     });
-    const params = sql.mock.calls[0][1];
+    const params = upsert(sql)[1];
     expect(params[5]).toBe("test-1");
     expect(params[13]).toBe(45);
     expect(params[16]).toBe(200);
@@ -130,7 +136,7 @@ describe("processLeadSubmission", () => {
       }),
       deps,
     );
-    const params = sql.mock.calls[0][1];
+    const params = upsert(sql)[1];
     expect(params[6]).toBe("compare");
     expect(params[7]).toMatch(/^[0-9a-f-]{36}$/);
     expect(params[7]).not.toBe("not-a-uuid");
@@ -186,6 +192,34 @@ describe("processLeadSubmission", () => {
       log.mockRestore();
     },
   );
+
+  it("checks the lead rate limit before saving and refuses when it is exceeded", async () => {
+    const { sql, deps } = setup(async (text) =>
+      text.includes("rate_limits") ? [{ client_key: "*", hits: 1000, seconds_left: 30 }] : [],
+    );
+    const result = await processLeadSubmission(submission(), deps);
+    expect(result).toEqual({ ok: false, error: "rate_limited" });
+    expect(sql.mock.calls.some(([text]) => text.includes("insert into leads"))).toBe(false);
+    expect(sql.mock.calls[0][1]).toEqual(["lead", ["*"], 600]);
+  });
+
+  it("passes the per-client key to the limiter without the raw IP", async () => {
+    const { sql, deps } = setup();
+    await processLeadSubmission(submission(), { ...deps, clientKey: "a".repeat(32) });
+    expect(sql.mock.calls[0][1]).toEqual(["lead", ["*", "a".repeat(32)], 600]);
+  });
+
+  it("allows a retry after a transient database failure", async () => {
+    let attempts = 0;
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { deps } = setup(async (text) => {
+      if (text.includes("insert into leads") && attempts++ === 0) throw new Error("timeout");
+      return [{ inserted: true }];
+    });
+    expect((await processLeadSubmission(submission(), deps)).ok).toBe(false);
+    expect((await processLeadSubmission(submission(), deps)).ok).toBe(true);
+    log.mockRestore();
+  });
 
   it("returns a generic error and no token when the database write fails", async () => {
     const failure = Object.assign(

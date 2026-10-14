@@ -10,10 +10,16 @@ if (!url) {
   process.exit(1);
 }
 
-const expected = ["funnel_events", "leads"];
+const expected = ["funnel_events", "leads", "rate_limits"];
 
 // Configuration problems are reported by variable name only, never by value.
 const retention = getRetentionConfig(process.env);
+// Per-client rate limiting needs a secret; without it only global limits apply.
+console.log(
+  (process.env.RATE_LIMIT_SECRET?.length ?? 0) >= 32
+    ? "Per-client rate limiting secret: set (used only when running on Vercel)"
+    : "Per-client rate limiting secret: NOT SET - only global limits will apply",
+);
 console.log(
   retention.ok
     ? "Retention policy: OK"
@@ -29,7 +35,9 @@ try {
   const found = rows.map((row) => row.table_name);
   console.log("Connection: OK");
   for (const table of expected) {
-    console.log(`Table ${table}: ${found.includes(table) ? "found" : "MISSING - apply db/schema.sql"}`);
+    console.log(
+      `Table ${table}: ${found.includes(table) ? "found" : table === "rate_limits" ? "MISSING - run db/migrations/002_rate_limits.sql" : "MISSING - apply db/schema.sql"}`,
+    );
   }
   const [{ nullable }] = await sql.query(
     "select is_nullable as nullable from information_schema.columns where table_schema = current_schema() and table_name = 'leads' and column_name = 'retention_expires_at'",

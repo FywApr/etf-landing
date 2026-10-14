@@ -15,9 +15,15 @@ const LEAD_ROW = {
 };
 
 /** A fake executor that records the order of operations. */
-function setup(options: { found?: boolean; lookupFails?: boolean; eventFails?: boolean } = {}) {
+function setup(
+  options: { found?: boolean; lookupFails?: boolean; eventFails?: boolean; limited?: boolean } = {},
+) {
   const order: string[] = [];
   const sql = vi.fn<SqlExecutor>(async (text) => {
+    if (text.includes("rate_limits")) {
+      order.push("limit");
+      return [{ client_key: "*", hits: options.limited ? 100000 : 1, seconds_left: 42 }];
+    }
     if (text.includes("from leads")) {
       order.push("lookup");
       if (options.lookupFails) throw Object.assign(new Error("connection refused"), { code: "08006" });
@@ -42,7 +48,7 @@ describe("handleGuideDownload", () => {
     const result = await handleGuideDownload(token, { sql, renderPdf });
 
     expect(result).toEqual({ status: "ok", pdf: PDF });
-    expect(order).toEqual(["lookup", "render", "event"]);
+    expect(order).toEqual(["limit", "lookup", "render", "event"]);
   });
 
   it("looks the token up by hash and never sends the plaintext to the database", async () => {
@@ -54,7 +60,8 @@ describe("handleGuideDownload", () => {
       expect(text).not.toContain(token);
       expect(params).not.toContain(token);
     }
-    expect(sql.mock.calls[0][1]).toEqual([hashGuideToken(token)]);
+    const lookup = sql.mock.calls.find(([text]) => text.includes("from leads"))!;
+    expect(lookup[1]).toEqual([hashGuideToken(token)]);
   });
 
   it("records the event with the lead's session and no token or email", async () => {
@@ -62,7 +69,7 @@ describe("handleGuideDownload", () => {
     const { token } = generateGuideToken();
     await handleGuideDownload(token, { sql, renderPdf });
 
-    const params = sql.mock.calls[1][1];
+    const params = sql.mock.calls.find(([text]) => text.includes("insert into funnel_events"))![1];
     expect(params).toContain("guide_download");
     expect(params).toContain(LEAD_ROW.session_id);
     expect(params).toContain("/api/guide");
@@ -84,7 +91,20 @@ describe("handleGuideDownload", () => {
     const { order, sql, renderPdf } = setup({ found: false });
     const result = await handleGuideDownload(generateGuideToken().token, { sql, renderPdf });
     expect(result).toEqual({ status: "not_found" });
-    expect(order).toEqual(["lookup"]);
+    expect(order).toEqual(["limit", "lookup"]);
+  });
+
+  it("answers rate_limited before looking the token up when the limit is exceeded", async () => {
+    const { order, sql, renderPdf } = setup({ limited: true });
+    const result = await handleGuideDownload(generateGuideToken().token, { sql, renderPdf });
+    expect(result).toEqual({ status: "rate_limited", retryAfterSeconds: 42 });
+    expect(order).toEqual(["limit"]);
+  });
+
+  it("does not count malformed tokens against the database at all", async () => {
+    const { sql, renderPdf } = setup();
+    await handleGuideDownload("not-a-token", { sql, renderPdf });
+    expect(sql).not.toHaveBeenCalled();
   });
 
   it("is unavailable when no database is configured", async () => {
@@ -117,7 +137,7 @@ describe("handleGuideDownload", () => {
     const result = await handleGuideDownload(generateGuideToken().token, { sql, renderPdf });
 
     expect(result).toEqual({ status: "unavailable" });
-    expect(order).toEqual(["lookup"]);
+    expect(order).toEqual(["limit", "lookup"]);
     log.mockRestore();
   });
 
@@ -129,7 +149,7 @@ describe("handleGuideDownload", () => {
       recordEvent: false,
     });
     expect(result).toEqual({ status: "ok", pdf: PDF });
-    expect(order).toEqual(["lookup", "render"]);
+    expect(order).toEqual(["limit", "lookup", "render"]);
   });
 
   it("still delivers the guide when recording the event fails", async () => {

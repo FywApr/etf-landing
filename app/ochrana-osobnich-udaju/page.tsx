@@ -45,8 +45,10 @@ function Notice({ config }: { config: PrivacyConfig }) {
       <h2 className={h2}>Proč chceme váš e-mail</h2>
       <p className={paragraph}>
         E-mail používáme k tomu, abychom evidovali vaši žádost o průvodce a zpřístupnili vám ho.
-        Průvodce neposíláme e-mailem: po odeslání formuláře se zobrazí stránka s odkazem ke
-        stažení, který platí {GUIDE_TOKEN_TTL_DAYS} dní. Právním základem je vyřízení vaší žádosti.
+        Průvodce neposíláme e-mailem: po odeslání formuláře se zobrazí stránka, ze které si ho
+        stáhnete. Přístup k němu zajišťuje technická cookie s náhodným přístupovým klíčem, kterou
+        prohlížeč nemůže číst skriptem a která platí {GUIDE_TOKEN_TTL_DAYS} dní. U nás je uložen
+        jen otisk tohoto klíče. Právním základem je vyřízení vaší žádosti.
       </p>
 
       <h2 className={h2}>Dobrovolný souhlas se zasíláním obsahu</h2>
@@ -68,8 +70,14 @@ function Notice({ config }: { config: PrivacyConfig }) {
           Z které verze stránky a z jaké kampaně jste přišli (parametry utm) a náhodný
           identifikátor návštěvy.
         </li>
-        <li>Otisk přístupového odkazu k průvodci a datum jeho platnosti.</li>
+        <li>Otisk přístupového klíče k průvodci a datum jeho platnosti.</li>
       </ul>
+      <p className={paragraph}>
+        Na ochranu formuláře a stahování před zneužitím počítáme počet požadavků. Při provozu na
+        hostingu Vercel k tomu z IP adresy vytváříme pomocí tajného klíče jednosměrný otisk; samotnou
+        IP adresu neukládáme. Otisk není anonymní, protože po dobu uložení odlišuje jedno připojení
+        od jiných, a mažeme ho nejpozději po 24 hodinách.
+      </p>
       <p className={paragraph}>
         Pro měření návštěvnosti zaznamenáváme události o používání webu, například zobrazení
         stránky nebo použití kalkulačky, spolu s náhodným identifikátorem návštěvy. Neobsahují
@@ -93,9 +101,10 @@ function Notice({ config }: { config: PrivacyConfig }) {
         </li>
         <li>Události o používání webu: nejdéle {funnelEventRetentionDays} dní od jejich zaznamenání.</li>
         <li>
-          Odkaz ke stažení průvodce přestává platit po {GUIDE_TOKEN_TTL_DAYS} dnech bez ohledu na
+          Přístup ke stažení průvodce přestává platit po {GUIDE_TOKEN_TTL_DAYS} dnech bez ohledu na
           uvedené lhůty.
         </li>
+        <li>Počítadla požadavků na ochranu před zneužitím: nejdéle 24 hodin.</li>
       </ul>
       <p className={paragraph}>Po uplynutí lhůty údaje mažeme.</p>
 

@@ -62,7 +62,10 @@ Read `docs/operations.md` and `docs/funnel.md` before changing any of this.
 - **Retention** rules live in `lib/retention.ts` (also run directly by Node, so it may not use `@/` imports) and are described in `docs/operations.md` section 7 and the privacy notice; keep all three in step. A lead's last activity is `updated_at`, set only by a guide request.
 - **Schema** lives in `db/schema.sql` (fresh installs) and must stay idempotent. Existing databases are upgraded by forward-only files in `db/migrations/`; when you add one, update `db/schema.sql` to match and extend the migration test in `tests/retention.test.ts`. `db/funnel-report.sql` and `db/retention-cleanup.sql` are executed by the tests, so docs and code cannot drift.
 - **Tests run SQL for real** against PGlite via `tests/helpers/database.ts`. No test may require a remote database.
-- **Guide tokens:** only the SHA-256 hash is stored. Never log, store or put a token in an event or page path.
+- **Guide tokens:** only the SHA-256 hash is stored. The token travels only in the HttpOnly access cookie (`lib/guide-cookie.ts`), never in a URL, response body, log or event.
+- **Rate limiting:** `lib/rate-limit.ts` (Postgres counters). Client IPs are trusted only on Vercel and stored only as a keyed hash. The limiter fails open. Limits are in `RATE_LIMIT_RULES`.
+- **Security headers** are set in `next.config.ts`; route-specific rules must come after the global `/:path*` rule (later rules win). `tests/security.test.ts` checks them.
+- **Database errors inside Server Components** must pass through `unstable_rethrow` (also on a Neon error's `sourceError`); Next.js aborts I/O at the end of a prerender pass and expects that rejection to propagate.
 - **Marketing consent** text and version are in `lib/consent.ts`; changing the text requires a new version (a test enforces it). A later submission must never clear existing consent.
 - **Events** are allow-listed in `lib/analytics/events.ts`. Never add email, form values, calculator inputs or results, tokens, IPs or user agents. `lead_created` and `guide_download` are server-only. The browser session ID lives in memory only: no cookies or storage.
 - **Logging:** use `logServerError()`; never log error messages, emails, tokens or request bodies.
