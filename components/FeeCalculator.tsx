@@ -13,7 +13,13 @@ import {
 } from "@/lib/calculator";
 import { trackOnce } from "@/lib/analytics/client";
 import { strategiesDiffer, type CalculatorFund } from "@/lib/etf-view";
-import { formatCzk, formatInteger, formatPercent, parseDecimalInput } from "@/lib/format";
+import {
+  formatCzk,
+  formatInteger,
+  formatPercent,
+  formatShare,
+  parseDecimalInput,
+} from "@/lib/format";
 
 // Illustrative, user-editable starting values. Not a forecast.
 const DEFAULT_VALUES: Record<InputField, string> = {
@@ -75,7 +81,7 @@ function NumberField({
       <label htmlFor={id} className="block text-sm font-medium">
         {label}
       </label>
-      <div className="relative mt-1">
+      <div className="relative mt-1.5">
         <input
           id={id}
           type="text"
@@ -85,13 +91,13 @@ function NumberField({
           onChange={(event) => onChange(event.target.value)}
           aria-invalid={issue ? true : undefined}
           aria-describedby={describedBy || undefined}
-          className={`h-12 w-full rounded-md border bg-background pl-3 pr-11 text-base tabular-nums ${
-            issue ? "border-danger" : "border-line"
+          className={`num h-14 w-full rounded-control border bg-card pl-3.5 pr-12 text-xl font-semibold transition-shadow focus:shadow-[0_0_0_4px_var(--lime)] motion-reduce:transition-none ${
+            issue ? "border-2 border-danger" : "border-line-strong"
           }`}
         />
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-muted"
+          className="pointer-events-none absolute inset-y-0 right-3.5 flex items-center text-sm text-muted"
         >
           {FIELD_UNITS[field]}
         </span>
@@ -102,7 +108,8 @@ function NumberField({
         </p>
       )}
       {issue && (
-        <p id={`${id}-error`} className="mt-1 text-xs font-medium text-danger">
+        <p id={`${id}-error`} className="mt-1.5 flex gap-1.5 text-xs font-medium text-danger">
+          <span aria-hidden="true">!</span>
           {fieldMessage(field, issue.code)}
         </p>
       )}
@@ -130,19 +137,35 @@ function FundSelect({
       <label htmlFor={id} className="block text-sm font-medium">
         {label}
       </label>
-      <select
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-1 h-12 w-full rounded-md border border-line bg-background px-2 text-base"
-      >
-        {emptyLabel && <option value="">{emptyLabel}</option>}
-        {funds.map((fund) => (
-          <option key={fund.ticker} value={fund.ticker}>
-            {fund.ticker} · TER {formatPercent(fund.expenseRatioPct)}
-          </option>
-        ))}
-      </select>
+      <div className="relative mt-1.5">
+        <select
+          id={id}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-14 w-full appearance-none rounded-control border border-line-strong bg-card pl-3.5 pr-10 text-base font-semibold transition-shadow focus:shadow-[0_0_0_4px_var(--lime)] motion-reduce:transition-none"
+        >
+          {emptyLabel && <option value="">{emptyLabel}</option>}
+          {funds.map((fund) => (
+            <option key={fund.ticker} value={fund.ticker}>
+              {fund.ticker} · TER {formatPercent(fund.expenseRatioPct)}
+            </option>
+          ))}
+        </select>
+        <svg
+          viewBox="0 0 16 16"
+          aria-hidden="true"
+          className="pointer-events-none absolute right-3.5 top-1/2 size-4 -translate-y-1/2"
+        >
+          <path
+            d="M4 6l4 4 4-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
     </div>
   );
 }
@@ -155,63 +178,74 @@ interface FundResult {
 function Results({ rows }: { rows: FundResult[] }) {
   const baseline = rows[0].result;
   const largestFeeCost = Math.max(...rows.map((row) => row.result.feeCost));
+  const comparing = rows.length === 2;
 
   return (
     <div>
-      <dl className="grid grid-cols-2 gap-3 text-sm">
-        <div className="rounded-md bg-surface p-3">
-          <dt className="text-muted">Celkem vloženo</dt>
-          <dd className="mt-1 text-base font-semibold tabular-nums">
-            {formatCzk(baseline.totalContributions)}
-          </dd>
+      <dl className="grid grid-cols-2 border-y border-ink-line">
+        <div className="py-4 pr-4">
+          <dt className="text-sm text-ink-muted">Celkem vloženo</dt>
+          <dd className="num mt-1 text-lg font-semibold">{formatCzk(baseline.totalContributions)}</dd>
         </div>
-        <div className="rounded-md bg-surface p-3">
-          <dt className="text-muted">Hodnota při nulovém TER</dt>
-          <dd className="mt-1 text-base font-semibold tabular-nums">
-            {formatCzk(baseline.zeroTerValue)}
-          </dd>
+        <div className="border-l border-ink-line py-4 pl-4">
+          <dt className="text-sm text-ink-muted">Hodnota při nulovém TER</dt>
+          <dd className="num mt-1 text-lg font-semibold">{formatCzk(baseline.zeroTerValue)}</dd>
+          <dd className="mt-0.5 text-xs text-ink-muted">Srovnávací scénář bez nákladů fondu</dd>
         </div>
       </dl>
 
-      <ul className="mt-3 grid gap-3">
+      <ul className={`mt-5 grid gap-3 ${comparing ? "sm:grid-cols-2" : ""}`}>
         {rows.map(({ fund, result }) => (
-          <li key={fund.ticker} className="rounded-md border border-line p-3">
-            <div className="flex items-baseline justify-between gap-3">
-              <h4 className="font-semibold">{fund.ticker}</h4>
-              <p className="text-sm text-muted tabular-nums">
+          <li key={fund.ticker} className="rounded-2xl border border-ink-line bg-ink p-4 md:p-5">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <h4 className="font-display text-2xl leading-none font-bold">{fund.ticker}</h4>
+              <p className="num text-sm text-ink-muted">
                 TER {formatPercent(fund.expenseRatioPct)} ročně
               </p>
             </div>
-            <dl className="mt-2 grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-sm">
-              <dt className="text-muted">Odhad konečné hodnoty po nákladech fondu</dt>
-              <dd className="text-right font-semibold tabular-nums">
-                {formatCzk(result.finalValue)}
-              </dd>
-              <dt className="text-muted">Rozdíl oproti nulovému TER</dt>
-              <dd className="text-right font-semibold tabular-nums text-warn">
+            <dl className="mt-4">
+              <dt className="text-sm text-ink-muted">Modelový vliv nákladů fondu</dt>
+              <dd className="num mt-1 text-[2rem] leading-none font-semibold text-lime">
                 −{formatCzk(result.feeCost)}
               </dd>
+              <dd className="mt-1.5 text-xs text-ink-muted">
+                Rozdíl oproti nulovému TER, tj.{" "}
+                {formatShare(result.zeroTerValue > 0 ? (result.feeCost / result.zeroTerValue) * 100 : 0)}{" "}
+                z této hodnoty
+              </dd>
             </dl>
-            <div aria-hidden="true" className="mt-2 h-1.5 rounded-full bg-surface">
-              <div
-                className="h-1.5 rounded-full bg-warn"
-                style={{
-                  width: `${largestFeeCost > 0 ? (result.feeCost / largestFeeCost) * 100 : 0}%`,
-                }}
-              />
-            </div>
+            {comparing && (
+              <div aria-hidden="true" className="mt-4 h-2 rounded-full bg-ink-line">
+                <div
+                  className="h-2 rounded-full bg-lime transition-[width] duration-300 motion-reduce:transition-none"
+                  style={{
+                    width: `${largestFeeCost > 0 ? (result.feeCost / largestFeeCost) * 100 : 0}%`,
+                  }}
+                />
+              </div>
+            )}
+            <dl className="mt-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-t border-ink-line pt-3 text-sm">
+              <dt className="text-ink-muted">Odhad konečné hodnoty po nákladech fondu</dt>
+              <dd className="num font-semibold">{formatCzk(result.finalValue)}</dd>
+            </dl>
           </li>
         ))}
       </ul>
 
-      {rows.length === 2 && (
-        <p className="mt-3 rounded-md bg-accent-soft p-3 text-sm">
-          Rozdíl mezi {rows[0].fund.ticker} a {rows[1].fund.ticker} v tomto modelu:{" "}
-          <strong className="tabular-nums">
-            {formatCzk(Math.abs(rows[0].result.finalValue - rows[1].result.finalValue))}
-          </strong>{" "}
-          na konečné hodnotě. Vyplývá pouze z rozdílu TER při stejném předpokládaném výnosu.
-        </p>
+      {comparing && (
+        <>
+          <p className="mt-2 text-xs text-ink-muted">
+            Pruhy porovnávají modelový vliv nákladů obou fondů; delší pruh odpovídá vyššímu
+            vlivu.
+          </p>
+          <p className="mt-4 rounded-2xl bg-lime p-4 text-sm leading-relaxed text-ink">
+            Rozdíl mezi {rows[0].fund.ticker} a {rows[1].fund.ticker} v tomto modelu:{" "}
+            <strong className="num font-semibold">
+              {formatCzk(Math.abs(rows[0].result.finalValue - rows[1].result.finalValue))}
+            </strong>{" "}
+            na konečné hodnotě. Vyplývá pouze z rozdílu TER při stejném předpokládaném výnosu.
+          </p>
+        </>
       )}
     </div>
   );
@@ -262,13 +296,17 @@ export function FeeCalculator({ funds }: { funds: CalculatorFund[] }) {
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
+    <div className="grid overflow-hidden rounded-panel border border-ink-line bg-card shadow-[0_40px_80px_-50px_rgb(17_18_16/0.6)] lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:grid-rows-[auto_1fr]">
       <form
         noValidate
         onSubmit={(event) => event.preventDefault()}
         aria-label="Vstupy kalkulačky poplatků"
-        className="grid grid-cols-2 content-start gap-x-3 gap-y-4"
+        className="grid grid-cols-2 content-start gap-x-3 gap-y-5 p-5 md:p-8 lg:col-start-1 lg:row-start-1"
       >
+        <div className="col-span-2 hidden sm:block">
+          <p className="label-mono text-muted">Vaše předpoklady</p>
+          <h3 className="font-display mt-2 text-display-s font-bold">Nastavte vklad a horizont</h3>
+        </div>
         <NumberField
           field="initialDeposit"
           label="Počáteční vklad"
@@ -297,56 +335,80 @@ export function FeeCalculator({ funds }: { funds: CalculatorFund[] }) {
           issue={issueFor("annualReturnPct")}
           onChange={setValue("annualReturnPct")}
         />
-        <p className="col-span-2 -mt-2 text-xs text-muted">
+        <p className="col-span-2 -mt-1 text-xs leading-relaxed text-muted">
           Výchozí hodnoty jsou jen ilustrativní a můžete je změnit. Roční výnos je váš vlastní
           předpoklad před náklady fondu, ne prognóza ani očekávaný výnos.
         </p>
-        <FundSelect label="Fond" value={firstTicker} funds={funds} onChange={chooseFirst} />
-        <FundSelect
-          label="Porovnat s"
-          value={secondTicker}
-          funds={funds.filter((fund) => fund.ticker !== firstTicker)}
-          emptyLabel="Bez srovnání"
-          onChange={(ticker) => {
-            trackOnce("calculator_used");
-            setSecondTicker(ticker);
-          }}
-        />
+        <div className="col-span-2 grid grid-cols-2 gap-x-3 gap-y-5 border-t border-line pt-5">
+          <FundSelect label="Fond" value={firstTicker} funds={funds} onChange={chooseFirst} />
+          <FundSelect
+            label="Porovnat s"
+            value={secondTicker}
+            funds={funds.filter((fund) => fund.ticker !== firstTicker)}
+            emptyLabel="Bez srovnání"
+            onChange={(ticker) => {
+              trackOnce("calculator_used");
+              setSecondTicker(ticker);
+            }}
+          />
+        </div>
       </form>
 
-      <div aria-live="polite">
-        <h3 className="text-lg font-semibold tracking-tight">Modelový výsledek</h3>
-        <div className="mt-3">
+      <div
+        aria-live="polite"
+        className="on-ink bg-ink-raised p-5 md:p-8 lg:col-start-2 lg:row-span-2 lg:row-start-1"
+      >
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h3 className="font-display text-display-s font-bold">Modelový výsledek</h3>
+          <p className="label-mono text-ink-muted">Odhad, ne předpověď</p>
+        </div>
+        <div className="mt-5">
           {calculable ? (
             <Results rows={rows} />
           ) : (
-            <p className="rounded-md border border-line bg-surface p-3 text-sm">
+            <p className="flex gap-3 rounded-2xl border border-danger-on-ink/60 p-4 text-sm">
+              <span
+                aria-hidden="true"
+                className="flex size-5 shrink-0 items-center justify-center rounded-full bg-danger-on-ink text-xs font-bold text-ink"
+              >
+                !
+              </span>
               {formIssue ? formMessage(formIssue.code) : "Výsledek se zobrazí po opravě vstupů."}
             </p>
           )}
         </div>
 
         {strategiesDiffer(selected) && (
-          <p className="mt-3 rounded-md border border-warn-line bg-warn-soft p-3 text-sm">
-            <strong className="text-warn">Odlišná strategie.</strong> Vybrané fondy nesledují
-            stejně vážený index. Kalkulačka pro oba používá stejný předpokládaný výnos jen proto,
-            aby ukázala vliv TER. Neznamená to, že fondy ve skutečnosti dosáhnou stejného výnosu.
+          <p className="mt-4 grid grid-cols-[0.375rem_1fr] gap-3 rounded-2xl border border-ink-line p-4 text-sm leading-relaxed">
+            <span aria-hidden="true" className="hatch rounded-full text-lime" />
+            <span>
+              <strong className="font-semibold text-lime">Odlišná strategie.</strong> Vybrané
+              fondy nesledují stejně vážený index. Kalkulačka pro oba používá stejný předpokládaný
+              výnos jen proto, aby ukázala vliv TER. Neznamená to, že fondy ve skutečnosti dosáhnou
+              stejného výnosu.
+            </span>
           </p>
         )}
 
-        <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-muted">
-          <li>
-            Zjednodušený model: stálý roční výnos, měsíční úročení, příspěvky na konci měsíce.
-          </li>
-          <li>
-            Výsledek je odhad rozdílu konečné hodnoty, ne přesný součet skutečně zaplacených
-            poplatků, a není zárukou výnosu.
-          </li>
-          <li>
-            Nezahrnuje daně, poplatky brokera, spready ani převod měn a pohyb kurzu. Částky v Kč
-            jsou jen jednotkou modelu.
-          </li>
-        </ul>
+      </div>
+
+      <div className="px-5 pb-6 pt-6 md:px-8 md:pb-8 lg:col-start-1 lg:row-start-2 lg:pt-0">
+        <div className="lg:border-t lg:border-line lg:pt-5">
+          <p className="label-mono text-muted">Jak model počítá</p>
+          <ul className="mt-3 space-y-2 text-xs leading-relaxed text-muted">
+            <li>
+              Zjednodušený model: stálý roční výnos, měsíční úročení, příspěvky na konci měsíce.
+            </li>
+            <li>
+              Výsledek je odhad rozdílu konečné hodnoty, ne přesný součet skutečně zaplacených
+              poplatků, a není zárukou výnosu.
+            </li>
+            <li>
+              Nezahrnuje daně, poplatky brokera, spready ani převod měn a pohyb kurzu. Částky v Kč
+              jsou jen jednotkou modelu.
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
   );

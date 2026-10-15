@@ -11,9 +11,9 @@ export const metadata: Metadata = {
   description: "Jak tento web zpracovává osobní údaje při žádosti o průvodce.",
 };
 
-const h2 = "mt-8 text-xl font-semibold tracking-tight";
-const paragraph = "mt-3 text-muted";
-const list = "mt-3 list-disc space-y-2 pl-5 text-muted";
+const h2 = "font-display mt-12 border-t border-line pt-6 text-display-s font-bold";
+const paragraph = "mt-3 leading-relaxed text-muted";
+const list = "mt-3 list-disc space-y-2 pl-5 leading-relaxed text-muted marker:text-ink";
 
 // DRAFT WORDING. The legal bases, the retention period and the text as a whole
 // must be confirmed by the actual data controller before launch; see
@@ -36,7 +36,7 @@ function Notice({ config }: { config: PrivacyConfig }) {
       <h2 className={h2}>Kdo je správcem údajů</h2>
       <p className={paragraph}>
         {controller.name}, {controller.address}. Kontakt:{" "}
-        <a href={`mailto:${controller.email}`} className="underline underline-offset-2">
+        <a href={`mailto:${controller.email}`} className="link text-ink">
           {controller.email}
         </a>
         .
@@ -112,13 +112,13 @@ function Notice({ config }: { config: PrivacyConfig }) {
       <p className={paragraph}>
         Souhlas můžete kdykoli odvolat a můžete požádat o přístup ke svým údajům, jejich opravu
         nebo výmaz. Napište na{" "}
-        <a href={`mailto:${controller.email}`} className="underline underline-offset-2">
+        <a href={`mailto:${controller.email}`} className="link text-ink">
           {controller.email}
         </a>
         . Máte také právo podat stížnost u Úřadu pro ochranu osobních údajů.
       </p>
 
-      <p className="mt-8 text-sm text-muted">Verze zásad: {privacyNoticeVersion}</p>
+      <p className="label-mono mt-12 text-muted">Verze zásad: {privacyNoticeVersion}</p>
     </>
   );
 }
@@ -130,12 +130,15 @@ async function NoticeOrBlocker() {
 
   if (!config.ok) {
     return (
-      <div className="mt-6 rounded-lg border border-warn-line bg-warn-soft p-4">
-        <p className="font-semibold text-warn">Zásady zatím nejsou zveřejněny</p>
-        <p className="mt-1">
-          Provozovatel webu ještě nedoplnil své údaje. Dokud se tak nestane, formulář pro získání
-          průvodce nepřijímá žádné e-maily a žádné osobní údaje neukládáme.
-        </p>
+      <div className="mt-8 grid grid-cols-[0.375rem_1fr] gap-4 rounded-panel border border-ink bg-card p-5 md:p-6">
+        <span aria-hidden="true" className="hatch rounded-full text-ink" />
+        <div>
+          <p className="font-semibold">Zásady zatím nejsou zveřejněny</p>
+          <p className="mt-1">
+            Provozovatel webu ještě nedoplnil své údaje. Dokud se tak nestane, formulář pro
+            získání průvodce nepřijímá žádné e-maily a žádné osobní údaje neukládáme.
+          </p>
+        </div>
       </div>
     );
   }
@@ -145,7 +148,11 @@ async function NoticeOrBlocker() {
 export default function PrivacyPage() {
   return (
     <SimplePage>
-      <h1 className="text-3xl font-semibold tracking-tight">Ochrana osobních údajů</h1>
+      <p className="label-mono flex items-center gap-2 text-muted">
+        <span aria-hidden="true" className="size-2 rounded-[2px] bg-ink" />
+        Zásady
+      </p>
+      <h1 className="font-display mt-5 text-display-m font-bold">Ochrana osobních údajů</h1>
       <Suspense fallback={<p className={paragraph}>Načítáme…</p>}>
         <NoticeOrBlocker />
       </Suspense>

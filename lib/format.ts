@@ -8,11 +8,28 @@ const expenseRatioFormat = new Intl.NumberFormat("cs-CZ", {
   maximumFractionDigits: 4,
 });
 
+const shareFormat = new Intl.NumberFormat("cs-CZ", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
 const integerFormat = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
 
 /** Formats a percentage value that is already in percent: 0.0945 -> "0,0945 %". */
 export function formatPercent(valueInPercent: number): string {
   return `${expenseRatioFormat.format(valueInPercent)}${NBSP}%`;
+}
+
+/** A computed share in percent, two decimals: 0.5834 -> "0,58 %". Not for stored TER values. */
+export function formatShare(valueInPercent: number): string {
+  return `${shareFormat.format(valueInPercent)}${NBSP}%`;
+}
+
+/** Czech plural form for a whole number: one (1), few (2–4) or many (0, 5+). */
+export function czechPlural(count: number, one: string, few: string, many: string): string {
+  if (count === 1) return one;
+  if (count >= 2 && count <= 4) return few;
+  return many;
 }
 
 /** Whole Czech crowns: 1234567.8 -> "1 234 568 Kč". */

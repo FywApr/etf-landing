@@ -93,12 +93,12 @@ export function LeadForm() {
           aria-invalid={emailError ? true : undefined}
           aria-describedby={emailError ? `${emailId}-error` : undefined}
           placeholder="jmeno@domena.cz"
-          className={`mt-1 h-12 w-full rounded-md border bg-background px-3 text-base ${
-            emailError ? "border-danger" : "border-line"
+          className={`mt-1.5 h-14 w-full rounded-control border bg-ink px-4 text-lg text-paper placeholder:text-ink-muted ${
+            emailError ? "border-2 border-danger-on-ink" : "border-ink-line-strong"
           }`}
         />
         {emailError && (
-          <p id={`${emailId}-error`} className="mt-1 text-sm font-medium text-danger">
+          <p id={`${emailId}-error`} className="mt-1.5 text-sm font-medium text-danger-on-ink">
             {ERROR_MESSAGES[emailError]}
           </p>
         )}
@@ -112,16 +112,16 @@ export function LeadForm() {
         </label>
       </div>
 
-      <label className="flex items-start gap-3 text-sm">
+      <label className="flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-ink-muted">
         <input
           type="checkbox"
           name="marketingConsent"
           checked={marketingConsent}
           onChange={(event) => setMarketingConsent(event.target.checked)}
-          className="mt-0.5 size-5 shrink-0 accent-accent"
+          className="mt-0.5 size-5 shrink-0 accent-lime"
         />
         <span>
-          {MARKETING_CONSENT.text} <span className="text-muted">(Nepovinné.)</span>
+          <span className="text-paper">{MARKETING_CONSENT.text}</span> (Nepovinné.)
         </span>
       </label>
 
@@ -129,22 +129,22 @@ export function LeadForm() {
         type="submit"
         disabled={pending}
         aria-disabled={pending}
-        className="h-12 rounded-md bg-accent px-5 text-base font-semibold text-white hover:bg-accent-strong disabled:cursor-wait disabled:opacity-70"
+        className="btn-lime min-h-14 w-full text-base disabled:cursor-wait disabled:opacity-70"
       >
         {pending ? "Odesílám…" : "Chci průvodce"}
       </button>
 
-      <p role="status" className="text-sm">
+      <p role="status" className="text-sm empty:-mt-4">
         {formError && !pending && (
-          <span className="block rounded-md border border-danger bg-background p-3 text-danger">
+          <span className="block rounded-control border border-danger-on-ink/70 p-3 text-danger-on-ink">
             {ERROR_MESSAGES[formError]}
           </span>
         )}
       </p>
 
-      <p className="text-xs text-muted">
+      <p className="text-xs leading-relaxed text-ink-muted">
         Průvodce si stáhnete hned na další stránce, e-mailem ho neposíláme.{" "}
-        <Link href="/ochrana-osobnich-udaju" className="underline underline-offset-2">
+        <Link href="/ochrana-osobnich-udaju" className="link text-paper">
           Jak zpracováváme osobní údaje
         </Link>
         .

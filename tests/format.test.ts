@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { etfs } from "@/data/etfs";
 import { snapshotDate } from "@/lib/etf-view";
-import { formatCzk, formatDate, formatPercent, parseDecimalInput } from "@/lib/format";
+import {
+  czechPlural,
+  formatCzk,
+  formatDate,
+  formatPercent,
+  formatShare,
+  parseDecimalInput,
+} from "@/lib/format";
 
 // Intl uses non-breaking spaces; compare against plain spaces for readability.
 const plain = (text: string) => text.replace(/[  ]/g, " ");
@@ -34,6 +41,27 @@ describe("formatCzk", () => {
   it("rounds to whole crowns with Czech thousands separators", () => {
     expect(plain(formatCzk(1_234_567.8))).toBe("1 234 568 Kč");
     expect(plain(formatCzk(0))).toBe("0 Kč");
+  });
+});
+
+describe("formatShare", () => {
+  it("rounds a computed share to two decimals", () => {
+    expect(plain(formatShare(0.58341))).toBe("0,58 %");
+    expect(plain(formatShare(0))).toBe("0,00 %");
+  });
+});
+
+describe("czechPlural", () => {
+  it("picks the Czech form for one, two to four and five or more", () => {
+    const form = (count: number) => czechPlural(count, "zdroj", "zdroje", "zdrojů");
+    expect([0, 1, 2, 4, 5, 11].map(form)).toEqual([
+      "zdrojů",
+      "zdroj",
+      "zdroje",
+      "zdroje",
+      "zdrojů",
+      "zdrojů",
+    ]);
   });
 });
 

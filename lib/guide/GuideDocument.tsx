@@ -14,8 +14,9 @@ import {
   weightingLabels,
 } from "@/lib/etf-view";
 import { formatDate, formatPercent } from "@/lib/format";
+import { GUIDE_SECTIONS, GUIDE_TITLE } from "@/lib/guide/contents";
 
-export const GUIDE_TITLE = "Průvodce americkými ETF pro české investory";
+export { GUIDE_TITLE };
 
 const FONT_DIR = path.join(process.cwd(), "assets", "fonts");
 
@@ -289,7 +290,7 @@ export function GuideDocument({ funds }: { funds: Etf[] }) {
           </Text>
         </View>
 
-        <Text style={styles.h2}>Rychlý přehled</Text>
+        <Text style={styles.h2}>{GUIDE_SECTIONS.overview}</Text>
         <OverviewTable funds={funds} />
         <Text style={styles.small}>
           TER = celková roční nákladovost fondu v procentech hodnoty investice. Hodnota 0,03 %
@@ -305,7 +306,7 @@ export function GuideDocument({ funds }: { funds: Etf[] }) {
       </Page>
 
       <Page size="A4" style={styles.page}>
-        <Text style={styles.h2}>1. Rozšířené srovnání fondů</Text>
+        <Text style={styles.h2}>{GUIDE_SECTIONS.comparison}</Text>
         <Text style={[styles.paragraph, styles.muted]}>
           Každý údaj pochází z dokumentu správce fondu. Co se z oficiálního zdroje ověřit
           nepodařilo, je označeno slovem „{UNVERIFIED_LABEL}“ a není odhadováno.
@@ -317,7 +318,7 @@ export function GuideDocument({ funds }: { funds: Etf[] }) {
       </Page>
 
       <Page size="A4" style={styles.page}>
-        <Text style={styles.h2}>2. PRIIPs, KID a dostupnost pro investory z EU</Text>
+        <Text style={styles.h2}>{GUIDE_SECTIONS.priips}</Text>
         <Text style={styles.paragraph}>
           Nařízení EU o produktech PRIIPs počítá s tím, že neprofesionální investor dostane před
           nákupem investičního produktu sdělení klíčových informací (KID). Zda je KID pro konkrétní
@@ -336,7 +337,7 @@ export function GuideDocument({ funds }: { funds: Etf[] }) {
           </Text>
         </View>
 
-        <Text style={[styles.h2, { marginTop: 10 }]}>3. Kontrolní seznam pro výběr ETF</Text>
+        <Text style={[styles.h2, { marginTop: 10 }]}>{GUIDE_SECTIONS.checklist}</Text>
         {CHECKLIST.map((item) => (
           <View key={item} style={styles.listItem} wrap={false}>
             <View style={styles.checkbox} />
@@ -344,7 +345,7 @@ export function GuideDocument({ funds }: { funds: Etf[] }) {
           </View>
         ))}
 
-        <Text style={[styles.h2, { marginTop: 14 }]}>4. Metodika, aktuálnost a upozornění</Text>
+        <Text style={[styles.h2, { marginTop: 14 }]}>{GUIDE_SECTIONS.methodology}</Text>
         <Bullet>
           Údaje přebíráme z dokumentů správců fondů: stránek fondů, přehledů, prospektů a podání u
           americké Komise pro cenné papíry (SEC).
