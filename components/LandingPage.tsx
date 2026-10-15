@@ -292,7 +292,11 @@ function CalculatorSection({ variant }: { variant: LandingVariant }) {
   if (variant === "fees") {
     // The calculator overlaps the dark hero so it starts inside the first viewport.
     return (
-      <section id="kalkulacka" aria-label="Kalkulačka poplatků" className="pb-16 md:pb-24">
+      <section id="kalkulacka" aria-labelledby="kalkulacka-heading" className="pb-16 md:pb-24">
+        {/* Keeps the outline h1 → h2 → h3 without adding a visible heading. */}
+        <h2 id="kalkulacka-heading" className="sr-only">
+          Kalkulačka poplatků
+        </h2>
         <div className={`${container} relative z-10 -mt-20`}>{calculator}</div>
       </section>
     );

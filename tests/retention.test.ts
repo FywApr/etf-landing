@@ -467,10 +467,14 @@ describe("documentation matches the implemented policy", () => {
     expect(manualSql).toMatch(/90\s+=\s+FUNNEL_EVENT_RETENTION_DAYS/);
   });
 
-  it("documents every retention variable, the command, and that nothing is scheduled", () => {
+  it("documents every retention variable, both cleanup paths, and when the schedule counts as active", () => {
     for (const name of Object.values(RETENTION_ENV)) expect(operations).toContain(name);
     expect(operations).toContain("npm run retention:cleanup");
-    expect(operations).toContain("No scheduled job is configured");
+    expect(operations).toContain("/api/cron/retention");
+    expect(operations).toContain("CRON_SECRET");
+    expect(operations).toContain("The schedule is not active until");
+    expect(operations).toContain("Vercel Cron calls only the production deployment");
+    expect(envExample).toMatch(/^CRON_SECRET=$/m);
     expect(operations).toContain("must confirm them before public launch");
     expect(funnel).toContain("FUNNEL_EVENT_RETENTION_DAYS");
     expect(funnel).toContain("not anonymous");

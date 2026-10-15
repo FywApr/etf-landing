@@ -21,6 +21,8 @@ const SECURITY_HEADERS = [
 const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
+  // No framework fingerprint in responses.
+  poweredByHeader: false,
   partialPrefetching: true,
   // The PDF guide reads its fonts from disk at request time.
   outputFileTracingIncludes: {

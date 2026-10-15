@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-A conversion-focused, mobile-first landing page for Czech retail investors comparing US-listed ETFs, deployable to Vercel. Built: the ETF data layer, both landing routes, the comparison, the fee calculator, lead capture on Neon Postgres, the token-protected PDF guide, first-party funnel analytics and the privacy notice. Not done: deployment, a visual redesign, and anything that needs real credentials (no database is provisioned).
+A conversion-focused, mobile-first landing page for Czech retail investors comparing US-listed ETFs, deployable to Vercel. Built: the ETF data layer, both landing routes, the comparison, the fee calculator, lead capture on Neon Postgres, the token-protected PDF guide, first-party funnel analytics and the privacy notice. Also built: the daily retention cleanup endpoint scheduled in `vercel.json`. Not done: the Vercel deployment itself and anything that needs account access or real credentials; the release procedure is in `docs/deployment.md`.
 
 ## Commands
 
@@ -59,8 +59,9 @@ Read `docs/operations.md` and `docs/funnel.md` before changing any of this.
 
 - **No personal data without configuration.** `getLeadCaptureConfig()` in `lib/config.ts` must succeed before anything is stored. Never add defaults for the controller details or the three retention periods, and never invent a controller.
 - **Database access** goes through `SqlExecutor` (`lib/db.ts`) with parameterised statements only. The Neon HTTP driver has no interactive transactions: anything that must be atomic is one SQL statement (see `UPSERT_LEAD_SQL` in `lib/leads.ts`).
+- **Scheduled cleanup:** `app/api/cron/retention` → `lib/retention-job.ts` runs the same `runRetentionCleanup` as the script. It requires `CRON_SECRET` (Bearer, ≥ 32 chars) and returns counts only. Vercel Cron calls it on Production only.
 - **Retention** rules live in `lib/retention.ts` (also run directly by Node, so it may not use `@/` imports) and are described in `docs/operations.md` section 7 and the privacy notice; keep all three in step. A lead's last activity is `updated_at`, set only by a guide request.
-- **Schema** lives in `db/schema.sql` (fresh installs) and must stay idempotent. Existing databases are upgraded by forward-only files in `db/migrations/`; when you add one, update `db/schema.sql` to match and extend the migration test in `tests/retention.test.ts`. `db/funnel-report.sql` and `db/retention-cleanup.sql` are executed by the tests, so docs and code cannot drift.
+- **Schema** lives in `db/schema.sql` (fresh installs) and must stay idempotent. Existing databases are upgraded by forward-only files in `db/migrations/`; when you add one, update `db/schema.sql` to match and extend the migration test in `tests/retention.test.ts`. `db/funnel-report.sql`, `db/retention-cleanup.sql` and `db/migration-status.sql` (used by `npm run db:check`) are executed by the tests, so docs and code cannot drift.
 - **Tests run SQL for real** against PGlite via `tests/helpers/database.ts`. No test may require a remote database.
 - **Guide tokens:** only the SHA-256 hash is stored. The token travels only in the HttpOnly access cookie (`lib/guide-cookie.ts`), never in a URL, response body, log or event.
 - **Rate limiting:** `lib/rate-limit.ts` (Postgres counters). Client IPs are trusted only on Vercel and stored only as a keyed hash. The limiter fails open. Limits are in `RATE_LIMIT_RULES`.

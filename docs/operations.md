@@ -23,10 +23,11 @@ Set these in `.env.local` for local development (copy [`.env.example`](../.env.e
 | `CONSENTED_LEAD_RETENTION_DAYS` | Retention for leads with marketing consent; proposed 365 | Data controller |
 | `FUNNEL_EVENT_RETENTION_DAYS` | Retention for funnel events; proposed 90 | Data controller |
 | `RATE_LIMIT_SECRET` | At least 32 random characters; keys the per-client rate-limit hash. Without it only global limits apply. Generate with `openssl rand -base64 48`. | Developer |
+| `CRON_SECRET` | At least 32 random characters; authorises the daily cleanup at `/api/cron/retention` (section 7). Needed where the cron runs (Vercel Production). Without it the endpoint refuses to run. | Developer |
 
 Retention values are whole days from 1 to 3650, with no defaults. See section 7 for what each period means.
 
-`RATE_LIMIT_SECRET` is optional for lead capture; every other variable above is required.
+`RATE_LIMIT_SECRET` and `CRON_SECRET` are optional for lead capture; every other variable above is required. Which variables each environment needs is listed in [`deployment.md`](deployment.md), section 1.
 
 **If any required value is missing or invalid, lead capture is off.** The form returns "Formulář je dočasně nedostupný…", nothing is stored, and the privacy page shows a notice that the policy is not published. The server log names the missing variables, never their values.
 
@@ -38,14 +39,19 @@ Guide downloads need only `DATABASE_URL`. Funnel events (from the browser and th
 npm run db:check
 ```
 
-This reads `.env.local` and prints:
+This reads `.env.local`, changes nothing, and prints:
 
+- whether `RATE_LIMIT_SECRET` and `CRON_SECRET` are set (at least 32 characters), never their values;
 - whether the retention policy is valid, naming any missing or invalid variables;
 - whether the connection works;
-- whether both tables exist;
-- whether migration 001 has been applied.
+- whether `leads` and `funnel_events` exist;
+- whether migrations 001 and 002 are applied.
 
-It never prints values or the connection string; on failure it prints only the error class and code. It exits with an error if anything is wrong.
+To check another environment, put its variables in a separate ignored file and run `node --env-file=<file> scripts/check-db.mjs`.
+
+The schema checks run [`db/migration-status.sql`](../db/migration-status.sql), which can also be pasted into the Neon SQL Editor. A migration counts as applied only if **every** change it makes is present (001: old constraint gone, `retention_expires_at` required, `funnel_events_occurred_at_idx` exists; 002: `rate_limits` and `rate_limits_window_start_idx` exist), so a partly applied migration is reported as not applied. The test suite runs this query against the first schema, each migration step and the fresh schema.
+
+It never prints values or the connection string; on failure it prints only the error class and code. It exits with an error if the connection, a table, a migration or the retention policy is wrong. A missing `CRON_SECRET` or `RATE_LIMIT_SECRET` is reported but does not fail the check, because local development needs neither.
 
 ## 3a. Upgrading an existing database
 
@@ -130,7 +136,23 @@ Funnel events are deleted by age alone. A lead that still exists does not keep i
 
 ### Running the cleanup
 
-Nothing is deleted automatically. **No scheduled job is configured.** Until one is, the periods are only enforced when someone runs the cleanup.
+There are two ways to run the cleanup. Both call `runRetentionCleanup` in `lib/retention.ts` with `getRetentionConfig`, so they apply the same rules to the same configuration.
+
+#### Scheduled: `/api/cron/retention` (Vercel Production)
+
+[`vercel.json`](../vercel.json) schedules a daily Vercel Cron Job, `17 3 * * *` (UTC), that calls `GET /api/cron/retention` ([`lib/retention-job.ts`](../lib/retention-job.ts)).
+
+- **Authorisation.** Vercel sends `Authorization: Bearer <CRON_SECRET>`. The endpoint compares it in constant time. A missing or wrong header gets 401 and the database is not touched.
+- **Refuses to run when unconfigured.** If `CRON_SECRET` is missing or shorter than 32 characters it answers 503 to everyone. If `DATABASE_URL` or any retention period is missing, an authorised call gets 503 with the variable names (never values) and nothing is deleted.
+- **Output.** The response and the log line contain only `ok`, the three deletion counts, `complete` and, on failure, `failedStep`. On a database error it logs the error class and code only and answers 500.
+- **Repeat runs.** Vercel does not retry a failed run and may occasionally deliver one twice. Each run deletes whatever is due at that moment, so a duplicate run deletes nothing more, and a missed day is caught up by the next run.
+- **Only Production.** Vercel Cron calls only the production deployment. Preview deployments are never called by the schedule; test the endpoint there by calling it yourself ([`deployment.md`](deployment.md), section 5).
+- **Timing.** On the Hobby plan a daily job runs once at some point within the scheduled hour (03:00–03:59 UTC). On Pro it runs within the scheduled minute. With daily runs, a row can outlive its period by up to about a day; the privacy notice says data is deleted after the period, which the controller should accept with that tolerance.
+- **Batch limit.** One run deletes at most 100 batches of 1000 rows per table. If `complete` is false, more rows were due; the next day's run continues.
+
+**The schedule is not active until** `vercel.json` is part of a production deployment, `CRON_SECRET` is set in Production (followed by a redeploy), and a run has been seen in the project's **Settings → Cron Jobs → View Logs** with status 200. Until then the periods are only enforced when someone runs the cleanup by hand.
+
+#### By hand
 
 ```
 npm run retention:cleanup
@@ -148,7 +170,7 @@ The command deletes data in whichever database `DATABASE_URL` points to. Before 
 
 [`db/retention-cleanup.sql`](../db/retention-cleanup.sql) contains the same rules with the proposed values written in, for running by hand in the SQL Editor.
 
-To schedule it later, run the same logic on a timer, for example with a Vercel Cron Job calling a protected endpoint, or with a scheduled CI job running the command. Neither exists yet.
+Run by hand only against a database you mean to clean: it uses whatever `.env.local` points to.
 
 ### Withdrawing marketing consent
 
@@ -196,7 +218,7 @@ Values are in `RATE_LIMIT_RULES`. Five lead attempts per 10 minutes leave room f
 - **Running on Vercel** (`VERCEL=1`). Vercel overwrites `x-forwarded-for` with the real client IP to prevent spoofing (Vercel docs, "Request headers"). Anywhere else that header can be forged, so it is ignored and only the global limits apply. This includes `next start` locally and a proxy placed in front of Vercel.
 - **`RATE_LIMIT_SECRET` is set** to at least 32 random characters.
 
-The stored client key is the first 32 hex characters of HMAC-SHA256(secret, IP). The IP itself is never stored or logged. The key is pseudonymous, not anonymous. Rows are deleted after 24 hours: about 1 in 100 limiter calls purges old rows, and `npm run retention:cleanup` deletes them too.
+The stored client key is the first 32 hex characters of HMAC-SHA256(secret, IP). The IP itself is never stored or logged. The key is pseudonymous, not anonymous. Rows are deleted after 24 hours: about 1 in 100 limiter calls purges old rows, and the retention cleanup (scheduled or by hand) deletes them too.
 
 **If the limiter's database write fails, the request is allowed** (fail open) and `[rate-limit:<bucket>]` is logged with the error class and code. This keeps a limiter fault from locking out visitors. Every protected action needs the same database anyway, so a real outage fails there instead.
 
@@ -207,14 +229,32 @@ The stored client key is the first 32 hex characters of HMAC-SHA256(secret, IP).
 - A distributed attack from many IPs stays under per-client limits.
 - Each counted request costs one database round trip.
 
-### Platform rate limiting (Stage 6, not configured)
+### Platform rate limiting (Vercel WAF, not configured)
 
-Vercel WAF rate limiting is available on all plans; Hobby allows one rate-limit rule per project, with windows of 10 s to 10 min and IP or JA4 keys. It stops traffic before it reaches the application. Suggested rule once deployed:
+**No WAF rule exists until the Vercel dashboard (Project → Firewall) shows it as published.** WAF rate limiting stops traffic at Vercel's edge, before it reaches the function and the database, so it also protects the database-backed limiter itself. Limits from Vercel's documentation (checked 2026-10-15): fixed window on all plans, window 10 s to 10 min, keys IP or JA4 digest; **Hobby: 1 rate-limit rule per project** (and 3 custom rules in total), Pro: 40. Counters are per region. Rules can use the actions Log, 429 (default), Deny or Challenge.
 
-- **Condition:** request path starts with `/api/`.
-- **Limit:** 120 requests per 60 seconds per IP. Action: 429.
+How the form is submitted matters here: the lead form is a Next.js Server Action, which is a `POST` to the page's own path (`/` or `/poplatky`). Page views are `GET` and must not be counted.
 
-Start with the **Log** action for a few days to check real traffic, then switch to 429. On Pro, add separate rules for POST requests to `/` and `/poplatky` (form submissions).
+**Hobby (one rule): protect the write endpoints.**
+
+| Field | Value |
+|---|---|
+| Name | `writes-per-ip` |
+| If | Request Method equals `POST` **and** Request Path is any of `/`, `/poplatky`, `/api/events` (if the dashboard offers no such operator for paths, match the path against the regular expression `^/(poplatky|api/events)?$`) |
+| Then | Rate Limit, fixed window, **60 s**, **150 requests**, key **IP** |
+| Action | **Log** for the first days, then **Default (429)** |
+
+150 per minute stays above the application's own `events` per-client limit (120 per minute) plus a handful of form posts, so a legitimate visitor never hits the WAF before the app limit. It cuts off floods that would otherwise each cost a function call and a database round trip.
+
+Remaining exposure on Hobby: `GET /api/guide` is protected only by the application limiter (20 per client and 300 global per 10 minutes). Requests without a well-formed cookie are rejected before any database access, so the exposure is limited to requests carrying a syntactically valid token.
+
+**Pro (separate rules, in priority order):**
+
+1. `POST` to `/` or `/poplatky` (lead form): 10 per 60 s per IP, 429. Above the app's 5 per 10 minutes for retries, far below a flood.
+2. `POST /api/events`: 150 per 60 s per IP, 429.
+3. `GET /api/guide`: 30 per 60 s per IP, 429. A visitor downloads once or twice; 30 leaves room for retries and download managers that make several requests.
+
+Start each rule with **Log** and look at the Firewall traffic view before switching to 429. Never test a WAF rule by flooding the production URL.
 
 ### Other measures
 
@@ -238,11 +278,12 @@ Set in `next.config.ts` and verified on a local production build:
 | `Content-Security-Policy` | all | `frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'` |
 | `Permissions-Policy` | all | camera, microphone, geolocation, payment, usb and browsing-topics disabled |
 | `Strict-Transport-Security` | all | `max-age=63072000` (no `includeSubDomains`, no preload) |
-| `X-Robots-Tag` | `/dekujeme`, `/api/guide` | `noindex, nofollow` |
+| `X-Robots-Tag` | `/dekujeme`, `/api/guide`, `/api/cron/retention` | `noindex, nofollow` |
+| `X-Powered-By` | all | not sent (`poweredByHeader: false`) |
 
 The CSP has no `script-src` or `style-src`: Next.js inline scripts would need nonces, which make every page dynamic. Adding a full CSP is a separate decision.
 
-`/dekujeme` is rendered per request with `Cache-Control: private, no-cache, no-store`.
+`/dekujeme` and `/ochrana-osobnich-udaju` are rendered per request with `Cache-Control: private, no-cache, no-store`; `/api/guide` sends `private, no-store` and `/api/cron/retention` and `/api/events` send `no-store`. Only `/` and `/poplatky`, which contain no personal state, are static (`s-maxage=31536000`, cached until the next deployment).
 
 ## 9. Logging
 
@@ -279,6 +320,26 @@ delete from leads where email like 'stage4-smoke-%@example.com';
 
 Events from the smoke run's second visit, which had no campaign and a session that is no longer on the lead, cannot be singled out. They expire after `FUNNEL_EVENT_RETENTION_DAYS`.
 
+### Stage 6 release preparation (2026-10-15)
+
+Done locally; **nothing was deployed**. The Vercel CLI was not installed and the directory is not linked to a Vercel project, so no Preview or Production URL exists yet.
+
+- `npm test` (430 tests), `npm run typecheck`, `npm run lint` and `npm run build` pass.
+- `npm run db:check` with the new migration-status query, against the database in `.env.local` (read-only): connection OK, retention policy OK, migrations 001 and 002 both fully applied. `CRON_SECRET` is not set locally (not needed there).
+- No `DATABASE_URL`, database password or `RATE_LIMIT_SECRET` value occurs in tracked files, git history, or `.next/static` and `.next/server`.
+- `npm audit`: 5 high findings, all in dev tooling (`braces` → `micromatch` → `fast-glob` → `@next/eslint-plugin-next` → `eslint-config-next`). `npm audit --omit=dev`: 0. The suggested fix downgrades `eslint-config-next` to 14.x and was not applied.
+- Local `next start` with `DATABASE_URL` pointed at an unreachable address (so no real database could be touched):
+  - Headers as in section 8a on `/`, `/poplatky`, `/dekujeme`, `/ochrana-osobnich-udaju`, `/api/guide` and a 404 page.
+  - `/api/cron/retention`: 401 without or with a wrong `Authorization` header, 405 for POST.
+  - `/api/events`: 403 cross-origin, 415 non-JSON, 400 for the server-only `lead_created`, 503 for a valid event with the database down (not a false success).
+  - `/api/guide`: 404 with and without `?token=`.
+  - Form: Czech errors for an empty and an invalid address; the consent box is optional and unticked by default; with the database down a valid submission shows "Odeslání se nezdařilo…" and stays on the page.
+  - Headless Chrome at 360×640, 390×800, 768, 1280 and 1440 px: no horizontal overflow on any page; each variant's headline and CTA are on the first screen. The only element outside the viewport is the hidden honeypot field.
+  - Calculator: invalid, zero and negative inputs show Czech errors with `aria-invalid`; the `aria-live` result region updates. RSP carries "Rovnoměrně vážený index — odlišná strategie".
+  - Measured text contrast: lowest pair 5.34:1 (muted text on the lightest card). Visible focus outline on every tabbed element. With reduced motion, no animations and `scroll-behavior: auto`.
+  - Lighthouse (diagnostic, local, mobile): `/` performance 86, accessibility 100, best practices 96, SEO 100; `/poplatky` 91 / 100 (after the heading fix) / 96 / 100. The best-practices deduction was the 503 from the deliberately unreachable database. Client JavaScript on `/`: about 210 KiB gzip.
+- Cleanup endpoint: tested in the suite against PGlite with deliberately expired leads, events and rate-limit rows next to rows that must survive (`tests/retention-job.test.ts`).
+
 ### In isolated tests only (PGlite)
 
 These run in the test suite against PGlite, which is Postgres compiled to WebAssembly and running inside the test process:
@@ -289,16 +350,6 @@ These run in the test suite against PGlite, which is Postgres compiled to WebAss
 - rate-limit enforcement, window reset and purge;
 - token expiry.
 
-## 11. Stage 6 deployment checklist
+## 11. Deployment
 
-Not done. Each item must be completed and verified on the deployed environment:
-
-1. Apply `db/migrations/002_rate_limits.sql` to Neon; `npm run db:check` must report all three tables.
-2. Set all environment variables in Vercel (Production and Preview, separately): `DATABASE_URL`, the three `DATA_CONTROLLER_*`, `PRIVACY_NOTICE_VERSION`, the three retention periods, and `RATE_LIMIT_SECRET`. Preview deployments should use a separate Neon branch, not production data.
-3. Schedule the retention cleanup. For example, a Vercel Cron Job calling a new endpoint protected by `CRON_SECRET` that runs `runRetentionCleanup` once a day, or a scheduled CI job running `npm run retention:cleanup` with production secrets.
-   - It deletes leads past 30/365 days, events past 90 days and rate-limit rows past 24 hours, in whatever database it points to.
-   - Do not claim deletion is scheduled until the job has run and its counts have been checked.
-4. Configure the Vercel WAF rule from section 8, first in Log mode.
-5. Repeat the smoke test from section 10 on the deployed URL, including a rate-limit check (6 quick submissions from one client must produce the "příliš mnoho pokusů" message).
-6. Get the controller's confirmation of everything in section 4.
-
+The release procedure (environment matrix, Neon branches for Preview and Production, deployment steps, smoke tests and removing test data) is in [`deployment.md`](deployment.md). Section 4 above lists what the controller must confirm before Production collects real leads.

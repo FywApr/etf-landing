@@ -41,6 +41,10 @@ describe("security headers", () => {
     expect(headers["Strict-Transport-Security"]).toMatch(/max-age=\d+/);
   });
 
+  it("does not advertise the framework with X-Powered-By", () => {
+    expect(nextConfig.poweredByHeader).toBe(false);
+  });
+
   it("sends no referrer from the guide download, overriding the global rule", async () => {
     const rules = await nextConfig.headers!();
     const order = rules.map((entry) => entry.source);

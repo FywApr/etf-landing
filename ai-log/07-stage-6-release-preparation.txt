@@ -1,0 +1,1194 @@
+
+❯ STAGE 6 — FINAL RELEASE PREPARATION, VERCEL DEPLOYMENT,
+  PRODUCTION SMOKE TESTS, AND SUBMISSION READINESS
+
+  Stages 1–5 are implemented:
+  - Verified ETF data and source documentation.
+  - Two Czech-language advertising landing variants.
+  - Fee calculator and responsive comparison UI.
+  - Neon Postgres lead persistence.
+  - Protected Czech PDF guide.
+  - First-party funnel analytics.
+  - Configurable data-retention policies.
+  - Database-backed rate limiting.
+  - Cookie-based guide access with no raw token in the URL.
+  - Security hardening.
+  - New graphite / acid-lime / warm-white visual design.
+
+  The owner has manually tested lead submission and PDF downloading
+  against Neon. The UI has been reviewed at multiple viewports.
+
+  Your task is Stage 6 ONLY:
+  prepare, deploy, and verify the final application with a clear
+  separation between verified production configuration and remaining
+  human actions.
+
+  Do not rebuild the application or redesign the pages again.
+
+  ==================================================
+  1. INSPECT BEFORE CHANGING ANYTHING
+  ==================================================
+
+  Inspect:
+  - Git status, recent commits, and the full current diff.
+  - CLAUDE.md / claude.md.
+  - README.md / readme.md; do not modify them.
+  - package.json and lockfile.
+  - All app routes and server actions.
+  - .env.example and environment configuration validation.
+  - db/schema.sql and all migration files.
+  - scripts/check-db.mjs.
+  - scripts/retention-cleanup.mjs and the related database logic.
+  - lib/rate-limit.ts.
+  - Cookie/token access and the protected PDF route.
+  - db/funnel-report.sql and docs/funnel.md.
+  - docs/operations.md and the Czech privacy notice.
+  - Vercel-related configuration, vercel.json if present, and existing
+    scheduled-job or cron implementations.
+  - The latest design changes and responsive layouts.
+
+  Protect all existing work. Do not reset, discard, or rewrite Git
+  history. Do not create commits automatically.
+
+  Do not modify README.md in any casing.
+
+  Never print or request passwords, DATABASE_URL, RATE_LIMIT_SECRET,
+  CRON_SECRET, or other secret values. Do not inspect secret contents
+  for the purpose of reporting them.
+
+  Do not deploy, promote to Production, run cleanup, or apply database
+  migrations until the corresponding preconditions below are satisfied.
+
+  ==================================================
+  2. VERIFY A CLEAN, REPRODUCIBLE BUILD
+  ==================================================
+
+  Run:
+
+  npm test
+  npm run typecheck
+  npm run lint
+  npm run build
+
+  Inspect the existing npm audit fin
+  ──── (324 lines hidden) ─────────────────────────────────────────────────────
+  ==============================
+  11. ASSIGNMENT SUBMISSION READINESS
+  ==================================================
+
+  The final product must still satisfy the original Clientelo challenge.
+
+  Verify that the repository and deployed application demonstrate:
+  - Two ad variants and matching landing experiences.
+  - Real ETF data and source links.
+  - Interactive fee comparison.
+  - Lead capture and downloadable guide.
+  - End-to-end funnel analytics.
+  - A README written by the owner in Czech.
+  - Clear deployment/setup instructions.
+  - A documented, technically honest AI collaboration record.
+  - Useful A/B test hypotheses in the README, as required by the
+    assignment.
+
+  Do not write or rewrite README.md. Report if any required README
+  content still needs to be supplied by the owner.
+
+  Review AI logs in ai-log/ to make sure the implementation stages
+  are represented by genuine exports rather than fabricated or
+  rewritten transcripts. Do not create synthetic chat logs.
+
+  Review whether docs/ad-copy.md, docs/data-sources.md,
+  docs/funnel.md, and docs/operations.md accurately represent the
+  final implementation.
+
+  The remaining npm audit findings must be reported accurately.
+  Do not force-downgrade framework dependencies to silence the report.
+
+  ==================================================
+  12. REQUIRED FINAL OUTPUT
+  ==================================================
+
+  Provide a final checklist separating four states:
+
+  A. Implemented and verified by automated tests.
+  B. Verified against the actual Preview deployment and isolated DB.
+  C. Verified against Production, if Production deployment is approved.
+  D. Still requires manual owner input, account configuration,
+     legal confirmation, or dashboard action.
+
+  Report:
+  - Exact Preview and Production URLs, if they genuinely exist.
+  - Build/test results.
+  - Database environment checks.
+  - Rate-limiting verification.
+  - Scheduled-cleanup status.
+  - Security-header verification.
+  - Responsive/browser test results.
+  - Remaining legal and operational blockers.
+  - The precise steps for promoting Preview to Production.
+  - The README and submission items the owner still needs to complete.
+
+  Never invent successful commands, URLs, environment configuration,
+  legal approval, scheduled jobs, or test results.
+
+  Do not change README.md.
+  Do not create Git commits automatically.
+  Do not alter the Production database destructively.
+  Do not promote the application to Production without explicit
+  owner confirmation.
+
+  Stop after preparing the final verified release checklist.
+
+⏺ I'll start by inspecting the repository state before changing anything.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ Working tree is clean and everything through Stage 5 is committed. Now reading
+  the configuration, database and cleanup code.
+
+  Read 4 files, ran 1 shell command (ctrl+o to expand)
+
+⏺ The existing operations doc already sets out what Stage 6 needs: no scheduled
+  cleanup and no Preview isolation yet. I'll run the full verification suite
+  while I keep reading.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+⏺ Tests (413), typecheck and lint all pass. Next: the production build, npm
+  audit, and the Vercel CLI and link state.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+⏺ Build passes, and the audit still shows the same 5 high findings confined to
+  the ESLint dev-tooling chain, with 0 in production dependencies; Vercel CLI
+  isn't installed and the project isn't linked. Now I'll run the read-only
+  database check against the .env.local config.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ Database check passes — all three tables exist and migration 001 is applied.
+  Next I'll verify whether the controller values look like placeholders,
+  printing only yes/no without revealing the actual values.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ The controller values don't show obvious placeholder patterns, but confirming
+  whether they're real is up to the owner. Next, I'll scan tracked files, git
+  history, and build output for any actual secret values, reporting only match
+  counts.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ No secrets are present in tracked files, git history, or build output, and
+  only .env.example has ever been committed. Next I'll move on to the scheduled
+  cleanup, checking the Next.js docs for this version before writing a route
+  handler under Cache Components.
+
+  Listed 1 directory, ran 1 shell command (ctrl+o to expand)
+
+⏺ Build, tests, and secret scans are clean, though deploying isn't possible here
+  since the CLI isn't installed and the project isn't linked. Now I'll add the
+  protected daily cleanup endpoint using runRetentionCleanup, starting by
+  checking the test helpers to test it against PGlite.
+
+  Ran 3 shell commands (ctrl+o to expand)
+
+⏺ I'll write a read-only migration-status query that replaces the single NOT
+  NULL check (which falsely marked migration 001 as applied even if its index
+  step failed) and adds a dedicated check for migration 002.
+
+⏺ Write(db/migration-status.sql)
+  ⎿  Wrote 51 lines to db/migration-status.sql
+       1 -- Read-only schema status, used by `npm run db:check` and execu
+       2 -- Returns one row. A migration counts as applied only when ever
+         y change it
+         s NOT applied.
+       4 -- Safe to run in the Neon SQL Editor on any environment: it cha
+       5
+       6 select
+       8     select 1 from information_schema.tables
+       9     where table_schema = current_schema() and table_name = 'lead
+      10   ) as has_leads,
+     … +52 lines (ctrl+o to expand)
+
+⏺ Write(scripts/check-db.mjs)
+  ⎿  Added 24 lines, removed 22 lines
+       1 -// Checks the database connection and schema without printing a
+         -ny credentials.                                                
+       2 -// Usage: npm run db:check   (reads DATABASE_URL from .env.loca
+         -l)                                                             
+       1 +// Checks the database connection, schema and configuration wit
+         +hout printing                                                  
+       2 +// any values or credentials. Read-only: it changes nothing.   
+       3 +// Usage: npm run db:check   (reads .env.local)                
+       4 +// For another environment's file: node --env-file=<file> scrip
+         +ts/check-db.mjs                                                
+       5  
+       6 +import { readFileSync } from "node:fs";                        
+       7  import { neon } from "@neondatabase/serverless";
+       8  import { getRetentionConfig } from "../lib/retention.ts";
+       9  
+      10  const url = process.env.DATABASE_URL;
+      11  if (!url) {
+       9 -  console.error("DATABASE_URL is not set. Add it to .env.local.
+         -");                                                            
+      12 +  console.error("DATABASE_URL is not set.");                   
+      13    process.exit(1);
+      14  }
+      15  
+      13 -const expected = ["funnel_events", "leads", "rate_limits"];    
+      14 -                                                               
+      16  // Configuration problems are reported by variable name only, n
+          ever by value.
+      17  const retention = getRetentionConfig(process.env);
+      18 +const secretSet = (name) => (process.env[name]?.length ?? 0) >=
+         + 32;                                                           
+      19  // Per-client rate limiting needs a secret; without it only glo
+          bal limits apply.
+      20  console.log(
+      19 -  (process.env.RATE_LIMIT_SECRET?.length ?? 0) >= 32           
+      21 +  secretSet("RATE_LIMIT_SECRET")                               
+      22      ? "Per-client rate limiting secret: set (used only when run
+          ning on Vercel)"
+      23      : "Per-client rate limiting secret: NOT SET - only global l
+          imits will apply",
+      24  );
+      25 +// Needed only where the scheduled cleanup runs (Vercel Product
+         +ion).                                                          
+      26  console.log(
+      27 +  secretSet("CRON_SECRET")                                     
+      28 +    ? "Scheduled cleanup secret (CRON_SECRET): set"            
+      29 +    : "Scheduled cleanup secret (CRON_SECRET): NOT SET - /api/c
+         +ron/retention will refuse to run",                             
+      30 +);                                                             
+      31 +console.log(                                                   
+      32    retention.ok
+      33      ? "Retention policy: OK"
+      34      : `Retention policy: INVALID - missing or invalid ${retenti
+          on.missing.join(", ")}`,
+     ...
+      36  
+      37  try {
+      38    const sql = neon(url);
+      31 -  const rows = await sql.query(                                
+      32 -    "select table_name from information_schema.tables where tab
+         -le_schema = current_schema() and table_name = any($1) order by 
+         -table_name",                                                   
+      33 -    [expected],                                                
+      34 -  );                                                           
+      35 -  const found = rows.map((row) => row.table_name);             
+      39 +  const statusSql = readFileSync(new URL("../db/migration-statu
+         +s.sql", import.meta.url), "utf8");                             
+      40 +  const [status] = await sql.query(statusSql);                 
+      41    console.log("Connection: OK");
+      37 -  for (const table of expected) {                              
+      38 -    console.log(                                               
+      39 -      `Table ${table}: ${found.includes(table) ? "found" : tabl
+         -e === "rate_limits" ? "MISSING - run db/migrations/002_rate_lim
+         -its.sql" : "MISSING - apply db/schema.sql"}`,                  
+      40 -    );                                                         
+      41 -  }                                                            
+      42 -  const [{ nullable }] = await sql.query(                      
+      43 -    "select is_nullable as nullable from information_schema.col
+         -umns where table_schema = current_schema() and table_name = 'le
+         -ads' and column_name = 'retention_expires_at'",                
+      44 -  );                                                           
+      45 -  const migrated = nullable === "NO";                          
+      46 -  console.log(`Migration 001 (bounded retention): ${migrated ? 
+         -"applied" : "NOT APPLIED - run db/migrations/001_bounded_retent
+         -ion.sql"}`);                                                   
+      47 -  process.exit(found.length === expected.length && migrated && 
+         -retention.ok ? 0 : 1);                                         
+      42 +  const checks = [                                             
+      43 +    ["Table leads", status.has_leads, "MISSING - apply db/schem
+         +a.sql"],                                                       
+      44 +    ["Table funnel_events", status.has_funnel_events, "MISSING 
+         +- apply db/schema.sql"],                                       
+      45 +    ["Migration 001 (bounded retention)", status.migration_001,
+         + "NOT APPLIED - run db/migrations/001_bounded_retention.sql"], 
+      46 +    ["Migration 002 (rate limits)", status.migration_002, "NOT 
+         +APPLIED - run db/migrations/002_rate_limits.sql"],             
+      47 +  ];                                                           
+      48 +  for (const [label, ok, fix] of checks) console.log(`${label}:
+         + ${ok ? "OK" : fix}`);                                         
+      49 +  process.exit(checks.every(([, ok]) => ok) && retention.ok ? 0
+         + : 1);                                                         
+      50  } catch (error) {
+      51    // The message may contain the host name; print only the erro
+          r class and code.
+      52    console.error("Connection: FAILED", error?.name ?? "", error?
+          .code ?? "");
+
+⏺ Now the cleanup job module and its route. The module is framework-free so it
+  can be tested against PGlite.
+
+⏺ Write(lib/retention-job.ts)
+  ⎿  Wrote 72 lines to lib/retention-job.ts
+       1 // Scheduled retention cleanup. app/api/cron/retention wraps thi
+       2 // calls it once a day with "Authorization: Bearer <CRON_SECRET>
+         ". It runs the
+          the same
+         tions.md, section 7.
+       5 //
+         row data,
+       7 // emails, tokens, session IDs, configuration values or error me
+       8
+      10 import { getDatabaseUrl } from "@/lib/config";
+     … +85 lines (ctrl+o to expand)
+
+⏺ Write(app/api/cron/retention/route.ts)
+  ⎿  Wrote 17 lines to app/api/cron/retention/route.ts
+       1 import { createSqlExecutor } from "@/lib/db";
+         ob";
+       3
+       4 // Daily retention cleanup, scheduled in vercel.json. DELETES ex
+       5 // funnel events and rate-limit counters in the DATABASE_URL dat
+         abase. Only GET
+          405.
+       7 export async function GET(request: Request): Promise<Response> {
+       8   const { status, body } = await handleRetentionCleanupRequest(
+      10     process.env,
+     … +11 lines (ctrl+o to expand)
+
+⏺ Before writing vercel.json, I'll check the current Vercel Cron and WAF
+  documentation rather than rely on memory.
+
+⏺ Fetch(https://vercel.com/docs/cron-jobs/manage-cron-jobs)
+  ⎿  Received 17.3KB (200 OK)
+
+⏺ Fetch(https://vercel.com/docs/cron-jobs/usage-and-pricing)
+  ⎿  Received 6.3KB (200 OK)
+
+⏺ Fetch(https://vercel.com/docs/cron-jobs)
+  ⎿  Received 7.4KB (200 OK)
+
+⏺ Fetch(https://vercel.com/docs/vercel-firewall/vercel-waf/rate-limiting)  ⎿  Received 9.2KB (200 OK)
+
+⏺ Confirmed Vercel's cron behavior: GET requests to production only with a
+  Bearer token, UTC scheduling, and no retries on failure (with possible
+  duplicate delivery). Since our cleanup is idempotent, this is safe—now writing
+  vercel.json.
+
+⏺ Write(vercel.json)
+  ⎿  Wrote 9 lines to vercel.json
+      1 {
+      2   "$schema": "https://openapi.vercel.sh/vercel.json",
+      3   "crons": [
+      4     {
+      5       "path": "/api/cron/retention",
+      6       "schedule": "17 3 * * *"
+      7     }
+      8   ]
+      9 }
+
+⏺ Now the tests. They run the endpoint logic against PGlite, using deliberately
+  expired records next to records that must survive, and check the authorization
+  edge cases and the migration-status query.
+
+⏺ Write(tests/retention-job.test.ts)
+  ⎿  Wrote 296 lines to tests/retention-job.test.ts
+       1 // Scheduled retention cleanup endpoint, its Vercel Cron schedul
+         e, and the
+         ver Neon.
+       3
+       4 import { randomUUID } from "node:crypto";
+       6 import path from "node:path";
+       7 import { afterAll, afterEach, beforeAll, beforeEach, describe, e
+         xpect, it, vi } from "vitest";
+       9 import { insertEvent } from "@/lib/analytics/store";
+      10 import type { SqlExecutor } from "@/lib/db";
+     … +345 lines (ctrl+o to expand)
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ All 16 new tests pass, including the partial-001 case that the old NOT NULL
+  check would have wrongly flagged as applied. Next I'll update .env.example,
+  fix the stale "nothing is scheduled" comments, and revise the docs.
+
+⏺ Bash(python3 - <<'EOF'
+      import re…)
+  ⎿  Updated .env.example (+7 -0)
+      23  # only global rate limits apply.
+      24  RATE_LIMIT_SECRET=
+      25  
+      26 +# Authorises the daily retention cleanup (/api/cron/retention, 
+         +scheduled in                                                   
+      27 +# vercel.json). Vercel Cron sends it as "Authorization: Bearer 
+         +<value>". At                                                   
+      28 +# least 32 random characters (`openssl rand -base64 48`). Witho
+         +ut it the                                                      
+      29 +# endpoint refuses to run. Needed in Vercel Production; Vercel 
+         +Cron does not                                                  
+      30 +# call Preview deployments. Not needed for local development.  
+      31 +CRON_SECRET=                                                   
+      32 +                                                               
+      33  # Retention periods in whole days (1-3650). All three are requi
+          red: without
+      34  # them the form stores nothing and funnel events are not record
+          ed. There are
+      35  # no defaults, so missing configuration never means "keep forev
+          er".
+  ⎿  Updated db/retention-cleanup.sql (+2 -1)
+      10  --   90  = FUNNEL_EVENT_RETENTION_DAYS    (funnel events)
+      11  --
+      12  -- A lead's last activity is its most recent guide request (upd
+          ated_at).
+      13 --- Nothing schedules this automatically.                       
+      13 +-- On Vercel Production the same rules run daily via /api/cron/
+         +retention                                                      
+      14 +-- (vercel.json). This file is for running them by hand.       
+      15  
+      16  delete from leads
+      17  where retention_expires_at < now()
+  ⎿  Updated lib/rate-limit.ts (+2 -2)
+      84    let rows: Record<string, unknown>[];
+      85    try {
+      86      rows = await sql(RECORD_HITS_SQL, [bucket, keys, rule.windo
+          wSeconds]);
+      87 -    // Occasionally remove old counters so the table stays smal
+         -l even before                                                  
+      88 -    // the scheduled cleanup exists. Only rate-limit rows are t
+         -ouched.                                                        
+      87 +    // Occasionally remove old counters so the table stays smal
+         +l between                                                      
+      88 +    // scheduled cleanups, or where none runs. Only rate-limit 
+         +rows are touched.                                              
+      89      if (random() < PURGE_PROBABILITY) {
+      90        await sql(DELETE_EXPIRED_RATE_LIMITS_SQL, [RATE_LIMIT_REC
+          ORD_HOURS, 500]);
+      91      }
+  ⎿  (files that changed while this command ran, by the command or by
+     another process; a convenience view, not a review or audit of the
+     command)
+
+⏺ Now docs/operations.md: the variable table, the db:check output, the
+  scheduled-cleanup section, the WAF recommendation, and the Stage 6 checklist.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ Bash(python3 - <<'EOF'
+      p='docs/operations.md'; s=open(p).read()…)
+  ⎿  Updated docs/operations.md (+3 -13)
+      196  - **Running on Vercel** (`VERCEL=1`). Vercel overwrites `x-for
+           warded-for` with the real client IP to prevent spoofing (Verce
+           l docs, "Request headers"). Anywhere else that header can be f
+           orged, so it is ignored and only the global limits apply. This
+            includes `next start` locally and a proxy placed in front of 
+           Vercel.
+      197  - **`RATE_LIMIT_SECRET` is set** to at least 32 random charact
+           ers.
+      198  
+      199 -The stored client key is the first 32 hex characters of HMAC-S
+          -HA256(secret, IP). The IP itself is never stored or logged. Th
+          -e key is pseudonymous, not anonymous. Rows are deleted after 2
+          -4 hours: about 1 in 100 limiter calls purges old rows, and `np
+          -m run retention:cleanup` deletes them too.                    
+      199 +The stored client key is the first 32 hex characters of HMAC-S
+          +HA256(secret, IP). The IP itself is never stored or logged. Th
+          +e key is pseudonymous, not anonymous. Rows are deleted after 2
+          +4 hours: about 1 in 100 limiter calls purges old rows, and the
+          + retention cleanup (scheduled or by hand) deletes them too.   
+      200  
+      201  **If the limiter's database write fails, the request is allowe
+           d** (fail open) and `[rate-limit:<bucket>]` is logged with the
+            error class and code. This keeps a limiter fault from locking
+            out visitors. Every protected action needs the same database 
+           anyway, so a real outage fails there instead.
+      202  
+     ...
+      289  - rate-limit enforcement, window reset and purge;
+      290  - token expiry.
+      291  
+      292 -## 11. Stage 6 deployment checklist                           
+      293 -                                                              
+      294 -Not done. Each item must be completed and verified on the depl
+          -oyed environment:                                             
+      295 -                                                              
+      296 -1. Apply `db/migrations/002_rate_limits.sql` to Neon; `npm run
+          - db:check` must report all three tables.                      
+      297 -2. Set all environment variables in Vercel (Production and Pre
+          -view, separately): `DATABASE_URL`, the three `DATA_CONTROLLER_
+          -*`, `PRIVACY_NOTICE_VERSION`, the three retention periods, and
+          - `RATE_LIMIT_SECRET`. Preview deployments should use a separat
+          -e Neon branch, not production data.                           
+      298 -3. Schedule the retention cleanup. For example, a Vercel Cron 
+          -Job calling a new endpoint protected by `CRON_SECRET` that run
+          -s `runRetentionCleanup` once a day, or a scheduled CI job runn
+          -ing `npm run retention:cleanup` with production secrets.      
+      299 -   - It deletes leads past 30/365 days, events past 90 days an
+          -d rate-limit rows past 24 hours, in whatever database it point
+          -s to.                                                         
+      300 -   - Do not claim deletion is scheduled until the job has run 
+          -and its counts have been checked.                             
+      301 -4. Configure the Vercel WAF rule from section 8, first in Log 
+          -mode.                                                         
+      302 -5. Repeat the smoke test from section 10 on the deployed URL, 
+          -including a rate-limit check (6 quick submissions from one cli
+          -ent must produce the "příliš mnoho pokusů" message).          
+      303 -6. Get the controller's confirmation of everything in section 
+          -4.                                                            
+      292 +## 11. Deployment                                             
+      293  
+      294 +The release procedure (environment matrix, Neon branches for P
+          +review and Production, deployment steps, smoke tests and remov
+          +ing test data) is in [`deployment.md`](deployment.md). Section
+          + 4 above lists what the controller must confirm before Product
+          +ion collects real leads.                                      
+
+  Searched for 1 pattern, ran 1 shell command (ctrl+o to expand)
+
+⏺ The first edit script stopped on a failed match, so only the second set of
+  changes went in. I'll find the failing match and rerun the first script.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+⏺ Every anchor exists, so one of the longer multi-line blocks must differ
+  slightly. I'll rerun the edits from a file so any error is visible.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ The first script simply never wrote the file: I left out the final write. I'll
+  rerun it, minus the two edits the second script already made.
+
+⏺ Bash(mkdir -p /private/tmp/claude-501/-Users-duman-Projects-clientelo-etf-land
+      ing/7fd66d3d-2931-491b-8515-80760924bffd/scratchpad && cat >
+      /private/tmp/claude-501/-U…)
+  ⎿  Updated docs/operations.md (+52 -12)
+      23  | `CONSENTED_LEAD_RETENTION_DAYS` | Retention for leads with ma
+          rketing consent; proposed 365 | Data controller |
+      24  | `FUNNEL_EVENT_RETENTION_DAYS` | Retention for funnel events; 
+          proposed 90 | Data controller |
+      25  | `RATE_LIMIT_SECRET` | At least 32 random characters; keys the
+           per-client rate-limit hash. Without it only global limits appl
+          y. Generate with `openssl rand -base64 48`. | Developer |
+      26 +| `CRON_SECRET` | At least 32 random characters; authorises the
+         + daily cleanup at `/api/cron/retention` (section 7). Needed whe
+         +re the cron runs (Vercel Production). Without it the endpoint r
+         +efuses to run. | Developer |                                   
+      27  
+      28  Retention values are whole days from 1 to 3650, with no default
+          s. See section 7 for what each period means.
+      29  
+      29 -`RATE_LIMIT_SECRET` is optional for lead capture; every other v
+         -ariable above is required.                                     
+      30 +`RATE_LIMIT_SECRET` and `CRON_SECRET` are optional for lead cap
+         +ture; every other variable above is required. Which variables e
+         +ach environment needs is listed in [`deployment.md`](deployment
+         +.md), section 1.                                               
+      31  
+      32  **If any required value is missing or invalid, lead capture is 
+          off.** The form returns "Formulář je dočasně nedostupný…", noth
+          ing is stored, and the privacy page shows a notice that the pol
+          icy is not published. The server log names the missing variable
+          s, never their values.
+      33  
+     ...
+      39  npm run db:check
+      40  ```
+      41  
+      41 -This reads `.env.local` and prints:                            
+      42 +This reads `.env.local`, changes nothing, and prints:          
+      43  
+      44 +- whether `RATE_LIMIT_SECRET` and `CRON_SECRET` are set (at lea
+         +st 32 characters), never their values;                         
+      45  - whether the retention policy is valid, naming any missing or 
+          invalid variables;
+      46  - whether the connection works;
+      45 -- whether both tables exist;                                   
+      46 -- whether migration 001 has been applied.                      
+      47 +- whether `leads` and `funnel_events` exist;                   
+      48 +- whether migrations 001 and 002 are applied.                  
+      49  
+      48 -It never prints values or the connection string; on failure it 
+         -prints only the error class and code. It exits with an error if
+         - anything is wrong.                                            
+      50 +To check another environment, put its variables in a separate i
+         +gnored file and run `node --env-file=<file> scripts/check-db.mj
+         +s`.                                                            
+      51 +                                                               
+      52 +The schema checks run [`db/migration-status.sql`](../db/migrati
+         +on-status.sql), which can also be pasted into the Neon SQL Edit
+         +or. A migration counts as applied only if **every** change it m
+         +akes is present (001: old constraint gone, `retention_expires_a
+         +t` required, `funnel_events_occurred_at_idx` exists; 002: `rate
+         +_limits` and `rate_limits_window_start_idx` exist), so a partly
+         + applied migration is reported as not applied. The test suite r
+         +uns this query against the first schema, each migration step an
+         +d the fresh schema.                                            
+      53 +                                                               
+      54 +It never prints values or the connection string; on failure it 
+         +prints only the error class and code. It exits with an error if
+         + the connection, a table, a migration or the retention policy i
+         +s wrong. A missing `CRON_SECRET` or `RATE_LIMIT_SECRET` is repo
+         +rted but does not fail the check, because local development nee
+         +ds neither.                                                    
+      55  
+      56  ## 3a. Upgrading an existing database
+      57  
+     ...
+      136  
+      137  ### Running the cleanup
+      138  
+      133 -Nothing is deleted automatically. **No scheduled job is config
+          -ured.** Until one is, the periods are only enforced when someo
+          -ne runs the cleanup.                                          
+      139 +There are two ways to run the cleanup. Both call `runRetention
+          +Cleanup` in `lib/retention.ts` with `getRetentionConfig`, so t
+          +hey apply the same rules to the same configuration.           
+     … 64 more lines (ctrl+o to expand)
+
+⏺ I'll update the doc-consistency test to drop the old "No scheduled job is
+  configured" assertion, replacing it with checks that the doc names the route
+  and secret while still noting the schedule isn't active until verified.
+
+⏺ Update(tests/retention.test.ts)
+  ⎿  Added 6 lines, removed 2 lines
+      467      expect(manualSql).toMatch(/90\s+=\s+FUNNEL_EVENT_RETENTION
+           _DAYS/);
+      468    });
+      469  
+      470 -  it("documents every retention variable, the command, and tha
+          -t nothing is scheduled", () => {                              
+      470 +  it("documents every retention variable, both cleanup paths, 
+          +and when the schedule counts as active", () => {              
+      471      for (const name of Object.values(RETENTION_ENV)) expect(op
+           erations).toContain(name);
+      472      expect(operations).toContain("npm run retention:cleanup");
+      473 -    expect(operations).toContain("No scheduled job is configur
+          -ed");                                                         
+      473 +    expect(operations).toContain("/api/cron/retention");      
+      474 +    expect(operations).toContain("CRON_SECRET");              
+      475 +    expect(operations).toContain("The schedule is not active u
+          +ntil");                                                       
+      476 +    expect(operations).toContain("Vercel Cron calls only the p
+          +roduction deployment");                                       
+      477 +    expect(envExample).toMatch(/^CRON_SECRET=$/m);            
+      478      expect(operations).toContain("must confirm them before pub
+           lic launch");
+      479      expect(funnel).toContain("FUNNEL_EVENT_RETENTION_DAYS");
+      480      expect(funnel).toContain("not anonymous");
+
+⏺ The doc test is updated. Before writing the release runbook, I'll check
+  whether a git remote exists, since that decides between Git-integration
+  deploys and CLI deploys.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+⏺ Local main matches origin/main, meaning pushes to it would trigger a
+  Production deploy if Vercel is connected that way—I'll account for that as I
+  write the runbook now.
+
+⏺ Write(docs/deployment.md)
+  ⎿  Wrote 217 lines to docs/deployment.md
+      1 # Deployment: Preview, Production and smoke tests
+      3 How to release the app on Vercel with Neon Postgres. Read [`opera
+        e. Nothing in it has been done until the owner records it as done
+        .
+      5 Ground rules:
+      7 - **Production data is never used for tests.** Preview gets its o
+        leads) run only on Preview.
+      8 - **Secrets go in the Vercel dashboard or `vercel env add`**, whi
+        file. Mark them **Sensitive**. Never commit them; `.env*` (except
+      9 - **Environment-variable cha
+     … +354 lines (ctrl+o to expand)
+
+⏺ Before relying on the runbook's checks, I'm confirming a few against the code:
+  the event payload shape, the footer privacy link, and the calculator's
+  invalid-input handling.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+⏺ The payload matches the schema, so I'll add a positive control test using the
+  same body as page_view (expecting 204) to confirm a 400 on lead_created is due
+  to the server-only rule, not a malformed request.
+
+⏺ Update(docs/deployment.md)
+  ⎿  Added 6 lines, removed 1 line
+      127  curl -s -o /dev/null -w "%{http_code}\n" -X POST "$PREVIEW/api
+           /events" -d 'x'          # 415
+      128  curl -s -o /dev/null -w "%{http_code}\n" -X POST "$PREVIEW/api
+           /events" \
+      129    -H "content-type: application/json" \
+      130 -  -d '{"eventId":"00000000-0000-4000-8000-000000000001","sessi
+          -onId":"00000000-0000-4000-8000-000000000002","name":"lead_crea
+          -ted","variant":"compare","path":"/","properties":{}}'  # 400  
+      130 +  -d '{"eventId":"00000000-0000-4000-8000-000000000001","sessi
+          +onId":"00000000-0000-4000-8000-000000000002","name":"lead_crea
+          +ted","variant":"compare","path":"/","properties":{"lead_status
+          +":"new"}}'  # 400: server-only                                
+      131 +curl -s -o /dev/null -w "%{http_code}\n" -X POST "$PREVIEW/api
+          +/events" \                                                    
+      132 +  -H "content-type: application/json" \                       
+      133 +  -d '{"eventId":"00000000-0000-4000-8000-000000000003","sessi
+          +onId":"00000000-0000-4000-8000-000000000002","name":"page_view
+          +","variant":"compare","path":"/","properties":{},"utm":{"campa
+          +ign":"stage6-smoke"}}'  # 204: control                        
+      134  ```
+      135  
+      136 +The last request is a positive control: if it does not return 
+          +204, the 400 above proves nothing.                            
+      137 +                                                              
+      138  Then in the SQL Editor, check that no event row contains an em
+           ail or token:
+      139  `select count(*) from funnel_events where properties::text ~ '
+           @|[A-Za-z0-9_-]{43}';` must be 0.
+      140  
+
+⏺ Now the small doc updates in claude.md and docs/funnel.md, then a full re-run
+  of the checks.
+
+⏺ Bash(python3 - <<'EOF'
+      def edit(p, old, new):…)
+  ⎿  Updated claude.md (+3 -2)
+       4  
+       5  ## Project
+       6  
+       7 -A conversion-focused, mobile-first landing page for Czech retai
+         -l investors comparing US-listed ETFs, deployable to Vercel. Bui
+         -lt: the ETF data layer, both landing routes, the comparison, th
+         -e fee calculator, lead capture on Neon Postgres, the token-prot
+         -ected PDF guide, first-party funnel analytics and the privacy n
+         -otice. Not done: deployment, a visual redesign, and anything th
+         -at needs real credentials (no database is provisioned).        
+       7 +A conversion-focused, mobile-first landing page for Czech retai
+         +l investors comparing US-listed ETFs, deployable to Vercel. Bui
+         +lt: the ETF data layer, both landing routes, the comparison, th
+         +e fee calculator, lead capture on Neon Postgres, the token-prot
+         +ected PDF guide, first-party funnel analytics and the privacy n
+         +otice. Also built: the daily retention cleanup endpoint schedul
+         +ed in `vercel.json`. Not done: the Vercel deployment itself and
+         + anything that needs account access or real credentials; the re
+         +lease procedure is in `docs/deployment.md`.                    
+       8  
+       9  ## Commands
+      10  
+     ...
+      59  
+      60  - **No personal data without configuration.** `getLeadCaptureCo
+          nfig()` in `lib/config.ts` must succeed before anything is stor
+          ed. Never add defaults for the controller details or the three 
+          retention periods, and never invent a controller.
+      61  - **Database access** goes through `SqlExecutor` (`lib/db.ts`) 
+          with parameterised statements only. The Neon HTTP driver has no
+           interactive transactions: anything that must be atomic is one 
+          SQL statement (see `UPSERT_LEAD_SQL` in `lib/leads.ts`).
+      62 +- **Scheduled cleanup:** `app/api/cron/retention` → `lib/retent
+         +ion-job.ts` runs the same `runRetentionCleanup` as the script. 
+         +It requires `CRON_SECRET` (Bearer, ≥ 32 chars) and returns coun
+         +ts only. Vercel Cron calls it on Production only.              
+      63  - **Retention** rules live in `lib/retention.ts` (also run dire
+          ctly by Node, so it may not use `@/` imports) and are described
+           in `docs/operations.md` section 7 and the privacy notice; keep
+           all three in step. A lead's last activity is `updated_at`, set
+           only by a guide request.
+      63 -- **Schema** lives in `db/schema.sql` (fresh installs) and must
+         - stay idempotent. Existing databases are upgraded by forward-on
+         -ly files in `db/migrations/`; when you add one, update `db/sche
+         -ma.sql` to match and extend the migration test in `tests/retent
+         -ion.test.ts`. `db/funnel-report.sql` and `db/retention-cleanup.
+         -sql` are executed by the tests, so docs and code cannot drift. 
+      64 +- **Schema** lives in `db/schema.sql` (fresh installs) and must
+         + stay idempotent. Existing databases are upgraded by forward-on
+         +ly files in `db/migrations/`; when you add one, update `db/sche
+         +ma.sql` to match and extend the migration test in `tests/retent
+         +ion.test.ts`. `db/funnel-report.sql`, `db/retention-cleanup.sql
+         +` and `db/migration-status.sql` (used by `npm run db:check`) ar
+         +e executed by the tests, so docs and code cannot drift.        
+      65  - **Tests run SQL for real** against PGlite via `tests/helpers/
+          database.ts`. No test may require a remote database.
+      66  - **Guide tokens:** only the SHA-256 hash is stored. The token 
+          travels only in the HttpOnly access cookie (`lib/guide-cookie.t
+          s`), never in a URL, response body, log or event.
+      67  - **Rate limiting:** `lib/rate-limit.ts` (Postgres counters). C
+          lient IPs are trusted only on Vercel and stored only as a keyed
+           hash. The limiter fails open. Limits are in `RATE_LIMIT_RULES`
+          .
+  ⎿  Updated docs/funnel.md (+1 -1)
+      65  - **Abuse.** The endpoint accepts only same-origin JSON up to 2
+           KB and is rate-limited: 3000 events per minute globally, plus 
+          120 per minute per client on Vercel with `RATE_LIMIT_SECRET` se
+          t (see `operations.md` section 8). It cannot prove that a reque
+          st comes from a real browser, so well-formed fake events within
+           those limits are still possible. Treat the numbers as indicati
+          ve.
+      66  - **Rate-limited events are lost.** Above the limits events are
+           refused (429) and not stored.
+      67  - **Timestamps** are set by the database when the event arrives
+          , not by the browser.
+      68 -- **Retention.** Events are deleted `FUNNEL_EVENT_RETENTION_DAY
+         -S` (proposed 90) days after `occurred_at` by `npm run retention
+         -:cleanup`; see `operations.md`. Reports therefore cover at most
+         - that window, and deleted events cannot be recovered for histor
+         -ical reports. Without that variable set, events are not recorde
+         -d at all.                                                      
+      68 +- **Retention.** Events are deleted `FUNNEL_EVENT_RETENTION_DAY
+         +S` (proposed 90) days after `occurred_at` by the daily cleanup 
+         +on Vercel Production (`/api/cron/retention`) or `npm run retent
+         +ion:cleanup`; see `operations.md`, section 7. Reports therefore
+         + cover at most that window, and deleted events cannot be recove
+         +red for historical reports. Without that variable set, events a
+         +re not recorded at all.                                        
+
+  Ran 1 shell command (ctrl+o to expand)
+⏺ All 429 tests pass with clean typecheck/lint, and the build confirms
+  /api/cron/retention is dynamic and never prerendered. Now I'll run the updated
+  read-only db:check against the database in .env.local.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ Both migrations 001 and 002 are confirmed fully applied on the production
+  database, and the missing CRON_SECRET locally is expected. Now I'll run a
+  local production-server smoke test with DATABASE_URL pointed to an unreachable
+  address to keep the real database safe.
+
+  Searched for 1 pattern, ran 2 shell commands (ctrl+o to expand)
+
+⏺ Confirmed: process.env takes precedence over .env.local, so the local server
+  can't reach the real database. Running the header and endpoint checks now.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ Headers, caching, auth, and error handling all check out as expected, but I
+  spotted that X-Powered-By: Next.js is still being sent, so I'll disable it.
+  Next I'll check the server log and look for a headless browser to run viewport
+  checks.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ The server log only contains sanitized error classes. Since Chrome is
+  installed, I'll install playwright-core in the scratchpad (keeping it out of
+  the project), point it at the system Chrome, and run checks for viewport,
+  overflow, and interaction behavior.
+
+  Made 1 scratchpad edit +151, searched for 1 pattern, ran 2 shell commands (ctrl+o to expand)
+
+⏺ No horizontal overflow across the five viewports—the only off-screen elements
+  are the "Firma" label/input, which is the intentionally hidden honeypot field,
+  and each variant's headline and CTA appear on the first screen as expected.
+  Fixing a script bug now and continuing with the rest.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ All behavior checks pass—links, RSP label, calculator validation, form errors,
+  consent handling, failed-save messaging, focus states, and reduced motion.
+  The pages lack canonical/Open Graph tags, but I'll skip adding those since
+  they require the actual domain; now I'll review some screenshots.
+
+  Read 2 files (ctrl+o to expand)
+
+⏺ The design renders as committed, diacritics included. Now contrast for the
+  color pairs the pages actually use, computed from the CSS tokens:
+
+  Searched for 1 pattern, ran 1 shell command (ctrl+o to expand)
+
+⏺ The lowest measured contrast is 5.34:1, muted text on the lightest surface,
+  which clears WCAG AA's 4.5:1 for normal text. Next is client JavaScript size.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+⏺ The homepage ships 210 KiB gzipped JS (689 KiB raw) across 9 chunks with no
+  third-party trackers. Lighthouse isn't installed, so I'll add it to the
+  scratchpad and run it against the local production build as a diagnostic check
+  only.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+⏺ The console error is just my test database being unreachable, not a real
+  bug—but the heading-order issue is genuine: on /poplatky the calculator's h3s
+  skip from the hero's h1 without an h2 in between. I'll check that structure
+  next.
+
+  Searched for 1 pattern, ran 1 shell command (ctrl+o to expand)
+
+⏺ Fixing the heading order: on /poplatky I'll give the calculator section a
+  visually hidden h2. This repairs the outline with no visual change.
+
+⏺ Update(components/LandingPage.tsx)
+  ⎿  Added 5 lines, removed 1 line
+      292    if (variant === "fees") {
+      293      // The calculator overlaps the dark hero so it starts insi
+           de the first viewport.
+      294      return (
+      295 -      <section id="kalkulacka" aria-label="Kalkulačka poplatků
+          -" className="pb-16 md:pb-24">                                 
+      295 +      <section id="kalkulacka" aria-labelledby="kalkulacka-hea
+          +ding" className="pb-16 md:pb-24">                             
+      296 +        {/* Keeps the outline h1 → h2 → h3 without adding a vi
+          +sible heading. */}                                            
+      297 +        <h2 id="kalkulacka-heading" className="sr-only">      
+      298 +          Kalkulačka poplatků                                 
+      299 +        </h2>                                                 
+      300          <div className={`${container} relative z-10 -mt-20`}>{
+           calculator}</div>
+      301        </section>
+      302      );
+
+⏺ Update(next.config.ts)
+  ⎿  Added 2 lines
+      21  const nextConfig: NextConfig = {
+      22    /* config options here */
+      23    cacheComponents: true,
+      24 +  // No framework fingerprint in responses.                    
+      25 +  poweredByHeader: false,                                      
+      26    partialPrefetching: true,
+      27    // The PDF guide reads its fonts from disk at request time.
+      28    outputFileTracingIncludes: {
+
+  Listed 1 directory (ctrl+o to expand)
+
+⏺ Both are supported: poweredByHeader is documented, and sr-only is already used
+  elsewhere in the project. I'll add a test for the header, then rebuild,
+  restart and re-verify.
+
+⏺ Update(tests/security.test.ts)
+  ⎿  Added 4 lines
+      41      expect(headers["Strict-Transport-Security"]).toMatch(/max-a
+          ge=\d+/);
+      42    });
+      43  
+      44 +  it("does not advertise the framework with X-Powered-By", () =
+         +> {                                                            
+      45 +    expect(nextConfig.poweredByHeader).toBe(false);            
+      46 +  });                                                          
+      47 +                                                               
+      48    it("sends no referrer from the guide download, overriding the
+           global rule", async () => {
+      49      const rules = await nextConfig.headers!();
+      50      const order = rules.map((entry) => entry.source);
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+⏺ Both fixes check out—X-Powered-By header is removed, /poplatky now scores 100
+  on accessibility with heading order fixed, and the screenshot matches the
+  original. Next, I'll review the AI logs and README for submission.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ Logs 01–05 all begin with the same /init transcript. I'll check whether
+  they're cumulative exports of one continuing session (each containing the
+  previous) rather than separate sessions:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ Logs 01–05 are cumulative exports of one ongoing session and 06 is separate;
+  they look like genuine, unmodified terminal exports with none of the secret
+  values exposed, though Stage 6 still needs exporting by the owner. The README
+  has only a title, so I'll now record this stage's verification in
+  docs/operations.md.
+
+⏺ Bash(python3 - <<'EOF'
+      p='docs/operations.md'; s=open(p).read()…)
+  ⎿  Updated docs/operations.md (+23 -2)
+      278  | `Content-Security-Policy` | all | `frame-ancestors 'none'; b
+           ase-uri 'self'; form-action 'self'; object-src 'none'` |
+      279  | `Permissions-Policy` | all | camera, microphone, geolocation
+           , payment, usb and browsing-topics disabled |
+      280  | `Strict-Transport-Security` | all | `max-age=63072000` (no `
+           includeSubDomains`, no preload) |
+      281 -| `X-Robots-Tag` | `/dekujeme`, `/api/guide` | `noindex, nofol
+          -low` |                                                        
+      281 +| `X-Robots-Tag` | `/dekujeme`, `/api/guide`, `/api/cron/reten
+          +tion` | `noindex, nofollow` |                                 
+      282 +| `X-Powered-By` | all | not sent (`poweredByHeader: false`) |
+      283  
+      284  The CSP has no `script-src` or `style-src`: Next.js inline scr
+           ipts would need nonces, which make every page dynamic. Adding 
+           a full CSP is a separate decision.
+      285  
+      285 -`/dekujeme` is rendered per request with `Cache-Control: priva
+          -te, no-cache, no-store`.                                      
+      286 +`/dekujeme` and `/ochrana-osobnich-udaju` are rendered per req
+          +uest with `Cache-Control: private, no-cache, no-store`; `/api/
+          +guide` sends `private, no-store` and `/api/cron/retention` and
+          + `/api/events` send `no-store`. Only `/` and `/poplatky`, whic
+          +h contain no personal state, are static (`s-maxage=31536000`, 
+          +cached until the next deployment).                            
+      287  
+      288  ## 9. Logging
+      289  
+     ...
+      320  
+      321  Events from the smoke run's second visit, which had no campaig
+           n and a session that is no longer on the lead, cannot be singl
+           ed out. They expire after `FUNNEL_EVENT_RETENTION_DAYS`.
+      322  
+      323 +### Stage 6 release preparation (2026-10-15)                  
+      324 +                                                              
+      325 +Done locally; **nothing was deployed**. The Vercel CLI was not
+          + installed and the directory is not linked to a Vercel project
+          +, so no Preview or Production URL exists yet.                 
+      326 +                                                              
+      327 +- `npm test` (430 tests), `npm run typecheck`, `npm run lint` 
+          +and `npm run build` pass.                                     
+      328 +- `npm run db:check` with the new migration-status query, agai
+          +nst the database in `.env.local` (read-only): connection OK, r
+          +etention policy OK, migrations 001 and 002 both fully applied.
+          + `CRON_SECRET` is not set locally (not needed there).         
+      329 +- No `DATABASE_URL`, database password or `RATE_LIMIT_SECRET` 
+          +value occurs in tracked files, git history, or `.next/static` 
+          +and `.next/server`.                                           
+      330 +- `npm audit`: 5 high findings, all in dev tooling (`braces` →
+          + `micromatch` → `fast-glob` → `@next/eslint-plugin-next` → `es
+          +lint-config-next`). `npm audit --omit=dev`: 0. The suggested f
+          +ix downgrades `eslint-config-next` to 14.x and was not applied
+          +.                                                             
+      331 +- Local `next start` with `DATABASE_URL` pointed at an unreach
+          +able address (so no real database could be touched):          
+      332 +  - Headers as in section 8a on `/`, `/poplatky`, `/dekujeme`,
+          + `/ochrana-osobnich-udaju`, `/api/guide` and a 404 page.      
+      333 +  - `/api/cron/retention`: 401 without or with a wrong `Author
+          +ization` header, 405 for POST.                                
+      334 +  - `/api/events`: 403 cross-origin, 415 non-JSON, 400 for the
+          + server-only `lead_created`, 503 for a valid event with the da
+          +tabase down (not a false success).                            
+      335 +  - `/api/guide`: 404 with and without `?token=`.             
+      336 +  - Form: Czech errors for an empty and an invalid address; th
+          +e consent box is optional and unticked by default; with the da
+          +tabase down a valid submission shows "Odeslání se nezdařilo…" 
+          +and stays on the page.                                        
+      337 +  - Headless Chrome at 360×640, 390×800, 768, 1280 and 1440 px
+          +: no horizontal overflow on any page; each variant's headline 
+          +and CTA are on the first screen. The only element outside the 
+          +viewport is the hidden honeypot field.                        
+      338 +  - Calculator: invalid, zero and negative inputs show Czech e
+          +rrors with `aria-invalid`; the `aria-live` result region updat
+          +es. RSP carries "Rovnoměrně vážený index — odlišná strategie".
+      339 +  - Measured text contrast: lowest pair 5.34:1 (muted text on 
+          +the lightest card). Visible focus outline on every tabbed elem
+          +ent. With reduced motion, no animations and `scroll-behavior: 
+          +auto`.                                                        
+      340 +  - Lighthouse (diagnostic, local, mobile): `/` performance 86
+          +, accessibility 100, best practices 96, SEO 100; `/poplatky` 9
+          +1 / 100 (after the heading fix) / 96 / 100. The best-practices
+          + deduction was the 503 from the deliberately unreachable datab
+          +ase. Client JavaScript on `/`: about 210 KiB gzip.            
+      341 +- Cleanup endpoint: tested in the suite against PGlite with de
+          +liberately expired leads, events and rate-limit rows next to r
+          +ows that must survive (`tests/retention-job.test.ts`).        
+      342 +                                                              
+      343  ### In isolated tests only (PGlite)
+      344  
+      345  These run in the test suite against PGlite, which is Postgres 
+           compiled to WebAssembly and running inside the test process:
+
+  Ran 1 shell command (ctrl+o to expand)
+⏺ I prepared everything for release, but nothing is deployed. The Vercel CLI
+  isn't installed and this folder isn't linked to a Vercel project, so there is
+  no Preview or Production URL. Logging in and linking need you, interactively.
+  Nothing is committed, the README is untouched, and I made no database changes.
+
+  What I changed
+
+  - Daily retention cleanup. New endpoint /api/cron/retention
+    (lib/retention-job.ts), scheduled daily at 03:17 UTC in vercel.json.
+    - It calls the same runRetentionCleanup as npm run retention:cleanup, so
+      there is one policy.
+    - It needs CRON_SECRET (at least 32 characters). Without it, it answers 503
+      to everyone; with a wrong or missing header, 401.
+    - It returns and logs only row counts.
+  - Migration check. The old check reported migration 001 as applied even if its
+    index step had failed, and it had no separate check for 002.
+    db/migration-status.sql now counts a migration as applied only when every
+    change in it is present. db:check uses it and also reports whether
+    CRON_SECRET is set.
+  - Small fixes, no visual change: X-Powered-By is no longer sent, and /poplatky
+    gets a visually hidden heading to fix the heading order. A before/after
+    screenshot is pixel-identical.
+  - Docs. New release runbook docs/deployment.md: which variables each
+    environment needs, separate Neon databases, Preview tests, removing test
+    data, and the Production steps. I updated docs/operations.md (cleanup, WAF
+    rule recommendation, verification record), .env.example, docs/funnel.md and
+    claude.md.
+
+  A. Verified by automated tests
+
+  - Suite: 430 tests pass; typecheck, lint and build pass.
+  - Cleanup endpoint: tested against PGlite. Deliberately expired leads, events
+    and rate-limit rows are deleted and the rows that should survive stay.
+    Running it twice is harmless. Missing secret or settings means it does
+    nothing, and errors never expose row data.
+  - Migration check: correct for the first schema, after each migration, for the
+    fresh schema, and for a half-applied 001 or 002.
+
+  Also verified locally, with next start and the database deliberately
+  unreachable:
+  - Headers: all security headers as documented; private pages and the PDF are
+    not cached.
+  - Endpoints: the cron route returns 401 without auth and 405 for POST. The
+    events endpoint returns 403 cross-origin, 415 non-JSON, 400 for server-only
+    events, and 503 when the database is down (not a false success).
+  - Layout: at 360, 390, 768, 1280 and 1440 px there is no horizontal overflow,
+    and each variant's headline and button are on the first screen.
+  - Behaviour:
+    - The calculator shows Czech errors for invalid input, and its live region
+      updates.
+    - RSP is labelled as an equal-weight strategy.
+    - Consent is optional and unticked by default.
+    - Keyboard focus is visible, and reduced motion is respected.
+  - Contrast: the lowest text contrast is 5.34:1, which passes WCAG AA.
+  - Lighthouse: local, mobile, diagnostic only.
+    - / scores 86 performance, 100 accessibility, 96 best practices, 100 SEO.
+    - /poplatky scores 91 / 100 / 96 / 100. The best-practices deduction comes
+      from the deliberately unreachable test database.
+  - Secrets: no secret value appears in tracked files, git history or the build
+    output.
+  - Database: db:check against the database in .env.local, read-only, passes.
+    Migrations 001 and 002 are both fully applied.
+  - npm audit: still 5 high findings, all in ESLint dev tooling; production
+    dependencies have 0. The suggested fix would downgrade eslint-config-next to
+    14.x, so I didn't apply it.
+
+  B and C. Verified on Preview / Production
+
+  Nothing yet: neither deployment exists. Runbook sections 5 and 7 have the
+  exact Preview tests (including the rate-limit and cleanup checks) and the
+  Production checks that don't delete anything.
+
+  D. Still needs you
+
+  1. Preview database (blocker for Preview). Create an empty one: a schema-only
+     Neon branch or a separate Neon project. A normal Neon branch copies the
+     real leads. Run db/schema.sql on it, then check it with node
+     --env-file=.env.preview.local scripts/check-db.mjs.
+  2. Vercel setup. Run npm i -g vercel, vercel login and vercel link.
+     - Check Settings → Git: GitHub main matches local main. If main is the
+       Production branch, pushing this work to main deploys Production, so put
+       it on a separate branch first.
+  3. Environment variables. Set them in Vercel for Preview and Production
+     separately, per runbook section 1. Use separate secret values per
+     environment, and add CRON_SECRET to Production. Redeploy after any change.
+  4. Data controller (blocker for Production).
+     - Confirm that the controller name, address and email are the real,
+       confirmed ones. They're set and don't look like placeholders, but I can't
+       confirm them.
+     - Accept the notice wording, the provisional 30/365/90-day and 7-day
+       periods (with up to about a day's lag from daily cleanup), and the
+       processor statement. The notice doesn't name Vercel or Neon yet.
+  5. WAF rule. None is configured. On Hobby you get one rule: POST to /,
+     /poplatky and /api/events, 150 per minute per IP, starting in Log mode.
+     With that, guide downloads rely on the app's own limit only.
+  6. Cleanup counts as running only once a production deployment exists and a
+     run shows status 200 in Settings → Cron Jobs → View Logs. On Hobby it runs
+     at some point between 03:00 and 03:59 UTC. Don't trigger it on Production
+     with the real secret as a test.
+  7. Canonical and social tags. They need the real domain, which I didn't guess.
+
+  Promoting to Production
+
+  Once 1–4 are done and the Preview tests pass:
+  1. Run npm run db:check against Production.
+  2. Run vercel deploy --prod, or merge into the Production branch.
+  3. Run the checks in runbook section 7.
+  4. Confirm the first cron run in the logs.
+
+  Submission items for you
+
+  - README: it has only a title. It still needs, in Czech:
+    - setup and deployment instructions;
+    - the A/B test hypotheses;
+    - a description of how AI was used.
+  - AI logs: logs 01–05 are cumulative exports of one session, each containing
+    the previous one; 06 is a separate session. They look genuine, and you might
+    mention the cumulative structure in the README. This Stage 6 session still
+    needs exporting.
+  - Live URL: add it once Production exists.

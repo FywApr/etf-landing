@@ -10,7 +10,8 @@
 --   90  = FUNNEL_EVENT_RETENTION_DAYS    (funnel events)
 --
 -- A lead's last activity is its most recent guide request (updated_at).
--- Nothing schedules this automatically.
+-- On Vercel Production the same rules run daily via /api/cron/retention
+-- (vercel.json). This file is for running them by hand.
 
 delete from leads
 where retention_expires_at < now()

@@ -84,8 +84,8 @@ export async function checkRateLimit(
   let rows: Record<string, unknown>[];
   try {
     rows = await sql(RECORD_HITS_SQL, [bucket, keys, rule.windowSeconds]);
-    // Occasionally remove old counters so the table stays small even before
-    // the scheduled cleanup exists. Only rate-limit rows are touched.
+    // Occasionally remove old counters so the table stays small between
+    // scheduled cleanups, or where none runs. Only rate-limit rows are touched.
     if (random() < PURGE_PROBABILITY) {
       await sql(DELETE_EXPIRED_RATE_LIMITS_SQL, [RATE_LIMIT_RECORD_HOURS, 500]);
     }
